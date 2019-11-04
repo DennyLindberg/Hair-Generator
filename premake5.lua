@@ -13,7 +13,10 @@ workspace "Hair Generator"
     systemversion("latest")
     system      "windows"
     platforms { "win64" }
-    defines   { "OS_WINDOWS" }        
+    defines   { 
+        "OS_WINDOWS",
+        "TINYOBJLOADER_IMPLEMENTATION"
+    }        
 
     filter { "platforms:*64"} architecture "x64"
 

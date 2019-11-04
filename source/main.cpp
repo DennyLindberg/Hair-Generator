@@ -27,12 +27,6 @@
 #include "core/utilities.h"
 #include "core/input.h"
 
-#include "generation/turtle3d.h"
-#include "generation/lsystem.h"
-#include "generation/fractals.h"
-
-#include "tree.h"
-
 /*
 	Program configurations
 */
@@ -52,6 +46,7 @@ namespace fs = std::filesystem;
 int main()
 {
 	fs::path contentFolder = fs::current_path().parent_path() / "content";
+	fs::path meshFolder = fs::current_path().parent_path() / "content" / "meshes";
 	InitializeApplication(ApplicationSettings{
 		WINDOW_VSYNC, WINDOW_FULLSCREEN, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RATIO, contentFolder
 	});
@@ -60,7 +55,7 @@ int main()
 	ApplicationClock clock;
 
 	OpenGLWindow window;
-	window.SetTitle("Tree Generation");
+	window.SetTitle("Hair Generator");
 	window.SetClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
 	GLuint defaultVao = 0;
@@ -70,7 +65,7 @@ int main()
 printf(R"(
 ====================================================================
 	
-    L-system Tree Generator.
+    Hair Generator.
 
     Controls:
         Mouse controls the camera. (L: Rotate, M: Move, R: Zoom)
@@ -90,10 +85,6 @@ printf(R"(
         Right arrow:    Increase branch divisions
 
         ESC:            Close the application
-
-    Please note that iterations greater than 6 takes a long time.
-    The application will not refresh during generations and will
-    appear to "hang".
 
 ====================================================================
 )");
@@ -126,9 +117,7 @@ printf(R"(
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(contentFolder);
 	shaderManager.LoadShader(defaultShader, L"basic_vertex.glsl", L"basic_fragment.glsl");
-	shaderManager.LoadShader(leafShader, L"leaf_vertex.glsl", L"leaf_fragment.glsl");
 	shaderManager.LoadShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl");
-	shaderManager.LoadShader(treeShader, L"phong_vertex.glsl", L"tree_fragment.glsl");
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
@@ -138,31 +127,22 @@ printf(R"(
 	phongShader.Use(); 
 		phongShader.SetUniformVec4("lightColor", lightColor);
 		phongShader.SetUniformVec3("lightPosition", lightPosition);
-	treeShader.Use(); 
-		treeShader.SetUniformVec4("lightColor", lightColor);
-		treeShader.SetUniformVec3("lightPosition", lightPosition);
-	leafShader.Use(); 
-		leafShader.SetUniformVec4("lightColor", lightColor);
-		leafShader.SetUniformVec3("lightPosition", lightPosition);
-
 
 	/*
-		Build leaf texture and mesh
+		Load mesh
 	*/
-	GLTriangleMesh leafMesh;
-	Canvas2D leafCanvas{128, 128};
-	GenerateLeaf(leafCanvas, leafMesh);
+	GLTriangleMesh dummymesh;
+	GLMesh::LoadOBJ(meshFolder/"lpshead.obj", dummymesh);
+	//GLTriangleMesh leafMesh;
+	//Canvas2D leafCanvas{128, 128};
+	//GenerateLeaf(leafCanvas, leafMesh);
 
 	/*
 		Build tree mesh
 	*/
 	GLLine skeletonLines, coordinateReferenceLines;
 	GLTriangleMesh branchMeshes, crownLeavesMeshes;
-	auto GenerateRandomTree = [&](TreeStyle style = TreeStyle::Default, int iterations = 5, int subdivisions = 3) {
-		printf("\r\nGenerating %s (%d iterations, %d subdivisions)... ", (style == TreeStyle::Default) ? "tree" : "slimmer tree", iterations, subdivisions);
-		GenerateNewTree(style, skeletonLines, branchMeshes, crownLeavesMeshes, leafMesh, uniformGenerator, iterations, subdivisions);
-	};
-	GenerateRandomTree();
+	//skeletonLines.AddLine(bone->transform.position, bone->tipPosition(), glm::fvec4(0.0f, 1.0f, 0.0f, 1.0f));
 
 	/*
 		Coordinate system reference lines
@@ -179,11 +159,8 @@ printf(R"(
 	/*
 		User interaction options
 	*/
-	TreeStyle treeStyle = TreeStyle::Default;
 	bool renderWireframe = false;
 	bool renderSkeleton = false;
-	int treeIterations = 5;
-	int treeSubdivisions = 3;
 
 	/*
 		Main application loop
@@ -219,6 +196,11 @@ printf(R"(
 			quit = (event.type == SDL_QUIT) || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE);
 			if (quit) break;
 
+			SDL_Keymod mod = SDL_GetModState();
+			bool bCtrlModifier = mod & KMOD_CTRL;
+			bool bShiftModifier = mod & KMOD_SHIFT;
+			bool bAltModifier = mod & KMOD_ALT;
+
 			if (event.type == SDL_KEYDOWN)
 			{
 				auto key = event.key.keysym.sym;
@@ -228,31 +210,29 @@ printf(R"(
 				else if (key == SDLK_6) renderSkeleton = !renderSkeleton;
 				else if (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
 				else if (key == SDLK_f) turntable.SnapToOrigin();
-				else if (key == SDLK_t)		treeStyle = (treeStyle == TreeStyle::Default) ? TreeStyle::Slim : TreeStyle::Default;
-				else if (key == SDLK_UP)    ++treeIterations;
-				else if (key == SDLK_DOWN)  treeIterations = (treeIterations <= 1) ? 1 : treeIterations - 1;
-				else if (key == SDLK_LEFT)  treeSubdivisions = (treeSubdivisions <= 1) ? 1 : treeSubdivisions - 1;
-				else if (key == SDLK_RIGHT) ++treeSubdivisions;
 
 				switch (key)
 				{
 				case SDLK_g:case SDLK_t:case SDLK_UP:case SDLK_DOWN:case SDLK_LEFT:case SDLK_RIGHT:
 				{
-					GenerateRandomTree(treeStyle, treeIterations, treeSubdivisions);
+					//GenerateRandomTree(treeStyle, treeIterations, treeSubdivisions);
 				}
 				default: { break; }
 				}
 			}
 			else if (event.type == SDL_MOUSEBUTTONDOWN)
 			{
-				captureMouse = true;
-				SDL_ShowCursor(0);
-				SDL_SetRelativeMouseMode(SDL_TRUE);
+				if (bAltModifier)
+				{
+					captureMouse = true;
+					SDL_ShowCursor(0);
+					SDL_SetRelativeMouseMode(SDL_TRUE);
 
-				auto button = event.button.button;
-				     if (button == SDL_BUTTON_LEFT)   turntable.inputState = TurntableInputState::Rotate;
-				else if (button == SDL_BUTTON_MIDDLE) turntable.inputState = TurntableInputState::Translate;
-				else if (button == SDL_BUTTON_RIGHT)  turntable.inputState = TurntableInputState::Zoom;
+					auto button = event.button.button;
+						 if (button == SDL_BUTTON_LEFT)   turntable.inputState = TurntableInputState::Rotate;
+					else if (button == SDL_BUTTON_MIDDLE) turntable.inputState = TurntableInputState::Translate;
+					else if (button == SDL_BUTTON_RIGHT)  turntable.inputState = TurntableInputState::Zoom;
+				}
 			}
 			else if (event.type == SDL_MOUSEBUTTONUP)
 			{
@@ -282,19 +262,24 @@ printf(R"(
 		glm::mat4 mvp = projection * branchMeshes.transform.ModelMatrix();
 
 		// Render tree branches
-		treeShader.Use();
-		treeShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		treeShader.UpdateMVP(mvp);
-		branchMeshes.Draw();
+		phongShader.Use();
+		phongShader.SetUniformVec3("cameraPosition", camera.GetPosition());
+		phongShader.UpdateMVP(mvp);
+		dummymesh.Draw();
+
+		//treeShader.Use();
+		//treeShader.SetUniformVec3("cameraPosition", camera.GetPosition());
+		//treeShader.UpdateMVP(mvp);
+		//branchMeshes.Draw();
 
 		// Render leaves
-		leafShader.Use();
-		leafShader.SetUniformFloat("sssBacksideAmount", 0.75f);
-		leafShader.SetUniformFloat("time", float(clock.time));
-		leafShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		leafShader.UpdateMVP(mvp);
-		leafCanvas.GetTexture()->UseForDrawing();
-		crownLeavesMeshes.Draw();
+		//leafShader.Use();
+		//leafShader.SetUniformFloat("sssBacksideAmount", 0.75f);
+		//leafShader.SetUniformFloat("time", float(clock.time));
+		//leafShader.SetUniformVec3("cameraPosition", camera.GetPosition());
+		//leafShader.UpdateMVP(mvp);
+		//leafCanvas.GetTexture()->UseForDrawing();
+		//crownLeavesMeshes.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

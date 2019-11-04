@@ -2,6 +2,7 @@
 #include <vector>
 #include "glad/glad.h"
 #include "../core/math.h"
+#include <filesystem>
 
 struct GLQuadProperties
 {
@@ -127,3 +128,8 @@ protected:
 
 	void CreateMeshBuffer(MeshBufferProperties properties);
 };
+
+namespace GLMesh
+{
+	bool LoadOBJ(std::filesystem::path FilePath, class GLTriangleMesh& OutMesh);
+}

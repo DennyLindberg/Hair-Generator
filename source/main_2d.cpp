@@ -22,10 +22,6 @@
 #include "core/threads.h"
 #include "core/utilities.h"
 
-#include "generation/turtle2d.h"
-#include "generation/lsystem.h"
-#include "generation/fractals.h"
-
 /*
 	Program configurations
 */
@@ -60,17 +56,17 @@ int main()
 
 	Canvas2D canvas;
 	canvas.Fill(Color{255, 255, 255, 255});
-	DrawFractalTree(canvas, 6, 3.0f, glm::fvec2(WINDOW_WIDTH * 0.3, WINDOW_HEIGHT), 90);
-	DrawKochCurve(canvas, 4, 2.0f, glm::fvec2(0, WINDOW_HEIGHT), 0);
-	DrawSierpinskiTriangle(canvas, 5, 8.0f, glm::fvec2(WINDOW_WIDTH, 0), -90);
-	DrawDragonCurve(canvas, 11, 3.5f, glm::fvec2(WINDOW_WIDTH * 0.92, WINDOW_HEIGHT*0.8), -90);
-	DrawFractalPlant(canvas, 6, 1.75f, glm::fvec2(0, WINDOW_HEIGHT*0.3), 0);
+	//DrawFractalTree(canvas, 6, 3.0f, glm::fvec2(WINDOW_WIDTH * 0.3, WINDOW_HEIGHT), 90);
+	//DrawKochCurve(canvas, 4, 2.0f, glm::fvec2(0, WINDOW_HEIGHT), 0);
+	//DrawSierpinskiTriangle(canvas, 5, 8.0f, glm::fvec2(WINDOW_WIDTH, 0), -90);
+	//DrawDragonCurve(canvas, 11, 3.5f, glm::fvec2(WINDOW_WIDTH * 0.92, WINDOW_HEIGHT*0.8), -90);
+	//DrawFractalPlant(canvas, 6, 1.75f, glm::fvec2(0, WINDOW_HEIGHT*0.3), 0);
 
-	DrawFractalTreeNezumiV2(canvas, 6, 25.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT), 90);
-	DrawFractalTreeNezumiV3(canvas, 6, 25.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT*0.35), 90);
+	//DrawFractalTreeNezumiV2(canvas, 6, 25.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT), 90);
+	//DrawFractalTreeNezumiV3(canvas, 6, 25.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT*0.35), 90);
 
 	std::vector<glm::fvec3> leafHull;
-	DrawFractalLeaf(leafHull, canvas, Color{ 0, 0, 0, 255 }, 6, 1.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT*0.65), 90);
+	//DrawFractalLeaf(leafHull, canvas, Color{ 0, 0, 0, 255 }, 6, 1.0f, glm::fvec2(WINDOW_WIDTH * 0.55, WINDOW_HEIGHT*0.65), 90);
 
 	double lastScreenUpdate = clock.time;
 	bool quit = false;

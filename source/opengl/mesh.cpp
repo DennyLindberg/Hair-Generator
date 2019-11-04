@@ -1,5 +1,6 @@
 #include "mesh.h"
 #include "../core/application.h"
+#include "../thirdparty/tiny_obj_loader.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/euler_angles.hpp"
@@ -383,4 +384,100 @@ void GLQuad::CreateMeshBuffer(MeshBufferProperties properties)
 	glEnableVertexAttribArray(texCoordAttribId);
 	glVertexAttribPointer(texCoordAttribId, valuesPerCoord, GL_FLOAT, false, 0, 0);
 	glBufferVector(GL_ARRAY_BUFFER, tcoords, GL_STATIC_DRAW);
+}
+
+namespace GLMesh
+{
+	bool LoadOBJ(std::filesystem::path FilePath, GLTriangleMesh& OutMesh)
+	{
+		OutMesh.Clear();
+
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+
+		std::string warn;
+		std::string err;
+
+		std::string inputfile{ FilePath.string() };
+		bool loaded = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str());
+
+		if (!warn.empty())
+		{
+			std::cout << warn << std::endl;
+		}
+
+		if (!loaded || shapes.size() == 0)
+		{
+			if (!err.empty())
+			{
+				std::cerr << err << std::endl;
+			}
+			return false;
+		}
+
+		// Copy indices
+		auto& MainMesh = shapes[0].mesh;
+		OutMesh.indices.resize(MainMesh.indices.size());
+		for (size_t i = 0; i < MainMesh.indices.size(); i++)
+		{
+			OutMesh.indices[i] = MainMesh.indices[i].vertex_index;
+		}
+
+		size_t vertexcount = attrib.vertices.size() / 3; // xyzw
+
+		OutMesh.positions.resize(vertexcount); // xyzw
+		OutMesh.normals.resize(vertexcount);    // xyz
+		OutMesh.colors.resize(vertexcount);
+		OutMesh.texCoords.resize(vertexcount);
+		for (size_t i = 0; i < vertexcount; i++)
+		{
+			size_t last_vertex_index = (3 * i + 2);
+			if (last_vertex_index < attrib.vertices.size())
+			{
+				OutMesh.positions[i] = glm::fvec3{ 
+					attrib.vertices[3*i+0], 
+					attrib.vertices[3*i+1], 
+					attrib.vertices[3*i+2]
+					// w ignored
+				};
+			}
+
+			size_t last_normal_index = (3 * i + 2);
+			if (last_normal_index < attrib.normals.size())
+			{
+				OutMesh.normals[i] = glm::fvec3{
+					attrib.normals[3 * i + 0],
+					attrib.normals[3 * i + 1],
+					attrib.normals[3 * i + 2]
+				};
+			}
+
+			//size_t last_color_index = (3 * i + 2);
+			//if (last_color_index < attrib.colors.size())
+			//{
+			//	OutMesh.colors[i] = glm::fvec4{
+			//		attrib.colors[3 * i + 0],
+			//		attrib.colors[3 * i + 1],
+			//		attrib.colors[3 * i + 2],
+			//		1.0f
+			//	};
+			//}
+
+			size_t last_texcoord_index = (2 * i + 2);
+			if (last_texcoord_index < attrib.texcoords.size())
+			{
+				OutMesh.texCoords[i] = glm::fvec4{
+					attrib.texcoords[2 * i + 0],
+					attrib.texcoords[2 * i + 1],
+					0.0f,
+					0.0f
+				};
+			}
+		}
+
+		OutMesh.SendToGPU();
+
+		return true;
+	}
 }

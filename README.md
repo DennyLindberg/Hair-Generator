@@ -14,6 +14,11 @@ Get **premake5** for generating makefiles or solutions for your IDE - https://pr
 
 After downloading the executable, place it in the root folder. Run `premake5 vs2019` in the terminal or command line to generate a Visual Studio 2019 solution (the solution ends up in the temp folder). Open the solution and you're good to go.
 
+# Third party content used
+
+**The Stanford 3D Scanning Repositoriy** - Meshes such as the Stanford Bunny - http://www-graphics.stanford.edu/data/3Dscanrep/3Dscanrep.html
+
+**Morgan McGuire, Computer Graphics Archive, July 2017** - Meshes such as the LPS Head - https://casual-effects.com/data/index.html
 
 # Third party libraries used
 
@@ -24,6 +29,8 @@ After downloading the executable, place it in the root folder. Run `premake5 vs2
 **glm** for vector and matrix data types compatible with OpenGL - https://glm.g-truc.net/0.9.9/index.html
 
 **lodepng** for loading and saving PNG files - https://lodev.org/lodepng/
+
+**tinyobjloader** for loading obj files - https://github.com/syoyo/tinyobjloader
 
 # Algorithms copied or referenced
 **Various GLSL noise algorithms** - Copied: https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83

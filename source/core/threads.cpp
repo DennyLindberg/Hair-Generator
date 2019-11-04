@@ -1,4 +1,5 @@
 #include "threads.h"
+#include <vector>
 
 #ifndef USE_MULTITHREADING
 #define USE_MULTITHREADING false
