@@ -20,7 +20,7 @@ struct MeshTransform
 	glm::fvec3 rotation{ 0.0f };
 	glm::fvec3 scale{ 1.0f };
 
-	glm::mat4 ModelMatrix();
+	glm::mat4 ModelMatrix() const;
 };
 
 class GLMeshInterface
@@ -132,4 +132,6 @@ protected:
 namespace GLMesh
 {
 	bool LoadOBJ(std::filesystem::path FilePath, class GLTriangleMesh& OutMesh);
+	void AppendCoordinateAxis(GLLine& OutLines, const glm::fvec3& origin, glm::fvec3& x, const glm::fvec3& y, const glm::fvec3& z, float scale = 1.0f);
+	void AppendCoordinateAxis(GLLine& OutLines, const glm::mat4& Transform, float scale = 1.0f);
 }

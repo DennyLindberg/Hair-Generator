@@ -1,6 +1,9 @@
 #include "mesh.h"
 #include "../core/application.h"
+
+#pragma warning(push,0)
 #include "../thirdparty/tiny_obj_loader.h"
+#pragma warning(pop)
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/euler_angles.hpp"
@@ -13,7 +16,7 @@ const GLuint normalAttribId = 1;
 const GLuint colorAttribId = 2;
 const GLuint texCoordAttribId = 3;
 
-glm::mat4 MeshTransform::ModelMatrix()
+glm::mat4 MeshTransform::ModelMatrix() const
 {
 	glm::mat4 s = glm::scale(glm::mat4{ 1.0f }, scale);
 	glm::mat4 r = glm::eulerAngleYXZ(
@@ -424,12 +427,14 @@ namespace GLMesh
 			OutMesh.indices[i] = MainMesh.indices[i].vertex_index;
 		}
 
-		size_t vertexcount = attrib.vertices.size() / 3; // xyzw
-
-		OutMesh.positions.resize(vertexcount); // xyzw
-		OutMesh.normals.resize(vertexcount);    // xyz
+		// Resize OutMesh data to match the obj contents
+		size_t vertexcount = attrib.vertices.size() / 3;
+		OutMesh.positions.resize(vertexcount);
+		OutMesh.normals.resize(vertexcount);
 		OutMesh.colors.resize(vertexcount);
 		OutMesh.texCoords.resize(vertexcount);
+
+		// Copy all data (could probably use memcpy, but meh)
 		for (size_t i = 0; i < vertexcount; i++)
 		{
 			size_t last_vertex_index = (3 * i + 2);
@@ -439,7 +444,6 @@ namespace GLMesh
 					attrib.vertices[3*i+0], 
 					attrib.vertices[3*i+1], 
 					attrib.vertices[3*i+2]
-					// w ignored
 				};
 			}
 
@@ -453,16 +457,16 @@ namespace GLMesh
 				};
 			}
 
-			//size_t last_color_index = (3 * i + 2);
-			//if (last_color_index < attrib.colors.size())
-			//{
-			//	OutMesh.colors[i] = glm::fvec4{
-			//		attrib.colors[3 * i + 0],
-			//		attrib.colors[3 * i + 1],
-			//		attrib.colors[3 * i + 2],
-			//		1.0f
-			//	};
-			//}
+			size_t last_color_index = (3 * i + 2);
+			if (last_color_index < attrib.colors.size())
+			{
+				OutMesh.colors[i] = glm::fvec4{
+					attrib.colors[3 * i + 0],
+					attrib.colors[3 * i + 1],
+					attrib.colors[3 * i + 2],
+					1.0f
+				};
+			}
 
 			size_t last_texcoord_index = (2 * i + 2);
 			if (last_texcoord_index < attrib.texcoords.size())
@@ -479,5 +483,21 @@ namespace GLMesh
 		OutMesh.SendToGPU();
 
 		return true;
+	}
+
+	void AppendCoordinateAxis(GLLine& OutLines, const glm::fvec3& origin, glm::fvec3& x, const glm::fvec3& y, const glm::fvec3& z, float scale)
+	{
+		OutLines.AddLine(origin, origin + x*scale, glm::fvec4(1.0f, 0.0f, 0.0f, 1.0f));
+		OutLines.AddLine(origin, origin + y*scale, glm::fvec4(0.0f, 1.0f, 0.0f, 1.0f));
+		OutLines.AddLine(origin, origin + z*scale, glm::fvec4(0.0f, 0.0f, 1.0f, 1.0f));
+	}
+
+	void AppendCoordinateAxis(GLLine& OutLines, const glm::mat4& Transform, float scale)
+	{
+		glm::fvec3 origin{ Transform[3][0], Transform[3][1], Transform[3][2] };
+		glm::fvec3 x{Transform[0]};
+		glm::fvec3 y{Transform[1]};
+		glm::fvec3 z{Transform[2]};
+		AppendCoordinateAxis(OutLines, origin, x*scale, y*scale, z*scale);
 	}
 }

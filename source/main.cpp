@@ -1,5 +1,3 @@
-#define USE_MULTITHREADING false
-
 // STL includes
 #include <cstdio>
 #include <cstdlib>
@@ -34,7 +32,7 @@ static const bool WINDOW_VSYNC = true;
 static const int WINDOW_FULLSCREEN = 0;
 static const int WINDOW_WIDTH = 1280;
 static const int WINDOW_HEIGHT = 720;
-static const float CAMERA_FOV = 60.0f;
+static const float CAMERA_FOV = 45.0f;
 static const float WINDOW_RATIO = WINDOW_WIDTH / float(WINDOW_HEIGHT);
 static const int FPS_LIMIT = 0;
 
@@ -68,7 +66,7 @@ printf(R"(
     Hair Generator.
 
     Controls:
-        Mouse controls the camera. (L: Rotate, M: Move, R: Zoom)
+        Alt + Mouse controls the camera. (L: Rotate, M: Move, R: Zoom)
 
         4:              Display wireframe surfaces
         5:              Display textured surfaces
@@ -97,13 +95,13 @@ printf(R"(
 
 	GLQuad backgroundQuad;
 	GLGrid grid;
-	grid.size = 20.0f;
-	grid.gridSpacing = 0.5f;
+	grid.size = 5.0f;
+	grid.gridSpacing = 0.1f;
 
 	TurntableController turntable(camera);
-	turntable.position = glm::vec3{0.0f, 7.0f, 0.0f};
+	turntable.position = glm::vec3{0.0f, 0.15f, 0.0f};
 	turntable.sensitivity = 0.25f;
-	turntable.Set(-25.0f, 15.0f, 15.0f);
+	turntable.Set(-65.0f, 15.0f, 1.0f);
 
 
 	/*
@@ -117,7 +115,7 @@ printf(R"(
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(contentFolder);
 	shaderManager.LoadShader(defaultShader, L"basic_vertex.glsl", L"basic_fragment.glsl");
-	shaderManager.LoadShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl");
+	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl");
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
@@ -125,42 +123,35 @@ printf(R"(
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 	glm::vec3 lightPosition{ 999999.0f };
 	phongShader.Use(); 
-		phongShader.SetUniformVec4("lightColor", lightColor);
-		phongShader.SetUniformVec3("lightPosition", lightPosition);
+	phongShader.SetUniformVec4("lightColor", lightColor);
+	phongShader.SetUniformVec3("lightPosition", lightPosition);
 
 	/*
 		Load mesh
 	*/
 	GLTriangleMesh dummymesh;
 	GLMesh::LoadOBJ(meshFolder/"lpshead.obj", dummymesh);
-	//GLTriangleMesh leafMesh;
-	//Canvas2D leafCanvas{128, 128};
-	//GenerateLeaf(leafCanvas, leafMesh);
+	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", dummymesh);
 
 	/*
-		Build tree mesh
+		Coordinate Axis Lines
 	*/
-	GLLine skeletonLines, coordinateReferenceLines;
-	GLTriangleMesh branchMeshes, crownLeavesMeshes;
-	//skeletonLines.AddLine(bone->transform.position, bone->tipPosition(), glm::fvec4(0.0f, 1.0f, 0.0f, 1.0f));
-
-	/*
-		Coordinate system reference lines
-	*/
-	glm::fvec3 orientationReferencePoint = glm::fvec3{ 0.0f, 0.0f, 0.0f };
-	glm::fvec3 x = glm::fvec3{ 1.0f, 0.0f, 0.0f };
-	glm::fvec3 y = glm::fvec3{ 0.0f, 1.0f, 0.0f };
-	glm::fvec3 z = glm::fvec3{ 0.0f, 0.0f, 1.0f };
-	coordinateReferenceLines.AddLine(orientationReferencePoint, orientationReferencePoint + x, glm::fvec4(x, 1.0f));
-	coordinateReferenceLines.AddLine(orientationReferencePoint, orientationReferencePoint + y, glm::fvec4(y, 1.0f));
-	coordinateReferenceLines.AddLine(orientationReferencePoint, orientationReferencePoint + z, glm::fvec4(z, 1.0f));
+	GLLine hierarchyAxisLines, coordinateReferenceLines;
+	GLMesh::AppendCoordinateAxis(
+		coordinateReferenceLines, 
+		glm::fvec3{ 0.0f, 0.0f, 0.0f }, 
+		glm::fvec3{ 1.0f, 0.0f, 0.0f }, 
+		glm::fvec3{ 0.0f, 1.0f, 0.0f }, 
+		glm::fvec3{ 0.0f, 0.0f, 1.0f },
+		0.1f
+	);
 	coordinateReferenceLines.SendToGPU();
 
 	/*
 		User interaction options
 	*/
 	bool renderWireframe = false;
-	bool renderSkeleton = false;
+	bool renderTransformHierarchy = false;
 
 	/*
 		Main application loop
@@ -188,7 +179,7 @@ printf(R"(
 		}
 
 		window.SetTitle("FPS: " + FpsString(deltaTime));
-		shaderManager.CheckLiveShaders();
+		//shaderManager.CheckLiveShaders();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
@@ -207,7 +198,7 @@ printf(R"(
 
 				if		(key == SDLK_4) renderWireframe = true;
 				else if (key == SDLK_5) renderWireframe = false;
-				else if (key == SDLK_6) renderSkeleton = !renderSkeleton;
+				else if (key == SDLK_6) renderTransformHierarchy = !renderTransformHierarchy;
 				else if (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
 				else if (key == SDLK_f) turntable.SnapToOrigin();
 
@@ -259,27 +250,13 @@ printf(R"(
 		// Determine scene render properties
 		glPolygonMode(GL_FRONT_AND_BACK, (renderWireframe? GL_LINE : GL_FILL));
 		glm::mat4 projection = camera.ViewProjectionMatrix();
-		glm::mat4 mvp = projection * branchMeshes.transform.ModelMatrix();
+		glm::mat4 mvp = projection;// *branchMeshes.transform.ModelMatrix();
 
-		// Render tree branches
+		// Render mesh
 		phongShader.Use();
 		phongShader.SetUniformVec3("cameraPosition", camera.GetPosition());
 		phongShader.UpdateMVP(mvp);
 		dummymesh.Draw();
-
-		//treeShader.Use();
-		//treeShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		//treeShader.UpdateMVP(mvp);
-		//branchMeshes.Draw();
-
-		// Render leaves
-		//leafShader.Use();
-		//leafShader.SetUniformFloat("sssBacksideAmount", 0.75f);
-		//leafShader.SetUniformFloat("time", float(clock.time));
-		//leafShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		//leafShader.UpdateMVP(mvp);
-		//leafCanvas.GetTexture()->UseForDrawing();
-		//crownLeavesMeshes.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -290,9 +267,25 @@ printf(R"(
 		lineShader.UpdateMVP(projection);
 		lineShader.Use();
 		coordinateReferenceLines.Draw();
-		if (renderSkeleton)
+		if (renderTransformHierarchy)
 		{
-			skeletonLines.Draw();
+			hierarchyAxisLines.Clear();
+			MeshTransform a;
+			MeshTransform b;
+			MeshTransform c;
+
+			a.position = { 1.0f, 0.0f, 0.0f };
+			b.position = { 0.0f, 1.0f, 0.0f };
+			b.rotation = { 45.0f, 0.0f, 0.0f };
+			c.position = { 0.0f, 1.0f, 0.0f };
+			c.rotation = { -45.0f, 0.0f, 45.0f };
+			
+			GLMesh::AppendCoordinateAxis(hierarchyAxisLines, a.ModelMatrix(), 0.1f);
+			GLMesh::AppendCoordinateAxis(hierarchyAxisLines, a.ModelMatrix() * b.ModelMatrix(), 0.1f);
+			GLMesh::AppendCoordinateAxis(hierarchyAxisLines, a.ModelMatrix() * b.ModelMatrix() * c.ModelMatrix(), 0.1f);
+			hierarchyAxisLines.SendToGPU();
+
+			hierarchyAxisLines.Draw();
 		}
 
 		// Done
