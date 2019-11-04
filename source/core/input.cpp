@@ -37,7 +37,7 @@ void TurntableController::ApplyMouseInput(int deltaX, int deltaY)
 	case TurntableInputState::Translate:
 	{
 		glm::vec3 inputOffset = camera->UpVector()*float(deltaY) + camera->SideVector()*float(deltaX);
-		inputOffset *= 0.5f*sensitivity*relativeSensitivity;
+		inputOffset *= 0.1f*sensitivity*relativeSensitivity;
 		position += inputOffset;
 		UpdateCamera();
 		break;

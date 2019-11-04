@@ -407,7 +407,8 @@ namespace GLMesh
 
 		if (!warn.empty())
 		{
-			std::cout << warn << std::endl;
+			// Ignore, we don't care about material warnings at the moment
+			//std::cout << warn << std::endl;
 		}
 
 		if (!loaded || shapes.size() == 0)

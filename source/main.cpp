@@ -66,23 +66,21 @@ printf(R"(
     Hair Generator.
 
     Controls:
-        Alt + Mouse controls the camera. (L: Rotate, M: Move, R: Zoom)
+        Control the camera
+        Alt + LMB: Rotate
+        Alt + MMB: Move
+        Alt + RMB: Zoom
 
-        4:              Display wireframe surfaces
-        5:              Display textured surfaces
-        6:              Toggle display of skeleton
-        F:              Re-center camera on origin
+        F:         Re-center camera on origin
 
-        S:              Take screenshot
+        4:         Display wireframe surfaces
+        5:         Display textured surfaces
 
-        G:              Generate new tree with current settings
-        T:              Toggle between default and slimmer tree style
-        Up arrow:       Increase L-system iterations (bigger tree)
-        Down arrow:     Decrease L-system iterations (smaller tree)
-        Left arrow:     Decrease branch divisions
-        Right arrow:    Increase branch divisions
-
-        ESC:            Close the application
+        6:         Toggle display of skeleton
+			       
+        S:         Take screenshot
+			       
+        ESC:       Close the application
 
 ====================================================================
 )");
@@ -179,7 +177,7 @@ printf(R"(
 		}
 
 		window.SetTitle("FPS: " + FpsString(deltaTime));
-		//shaderManager.CheckLiveShaders();
+		shaderManager.CheckLiveShaders();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
