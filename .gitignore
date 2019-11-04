@@ -1,0 +1,14 @@
+# other git repositories (submodules)
+
+#temporary files
+*.exe
+*.sdf
+*.suo
+*.lnk
+*.ilk
+*.pdb
+*.user
+*.opensdf
+*.DS_Store
+
+binaries/*

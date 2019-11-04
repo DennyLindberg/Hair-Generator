@@ -1,0 +1,12 @@
+# Image formats
+*.bmp   binary
+*.gif   binary
+*.jpg   binary
+*.png   binary
+*.psd   binary
+*.tga   binary
+
+# Audio formats
+*.ogg   binary
+*.pcm   binary
+*.wav   binary
