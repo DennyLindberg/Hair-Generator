@@ -76,6 +76,51 @@ GLint CompileAndPrintStatus(GLuint glShaderId)
 	return compileStatus;
 }
 
+GLint GLProgram::LinkAndPrintStatus()
+{
+	glAttachShader(programId, vertex_shader_id);
+	glAttachShader(programId, fragment_shader_id);
+	if (HasGeometryShader())
+	{
+		glAttachShader(programId, geometry_shader_id);
+	}
+	glLinkProgram(programId);
+
+	GLint linkStatus = 0;
+	glGetProgramiv(programId, GL_LINK_STATUS, &linkStatus);
+	if (linkStatus == GL_FALSE)
+	{
+		std::string message("");
+
+		int infoLogLength = 0;
+		std::unique_ptr<GLchar[]> infoLog(new GLchar[infoLogLength]);
+		glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &infoLogLength);
+		if (infoLogLength == 0)
+		{
+			message = "Message is empty (GL_INFO_LOG_LENGTH == 0)";
+		}
+		else
+		{
+			std::unique_ptr<GLchar[]> infoLog(new GLchar[infoLogLength]);
+			int charsWritten = 0;
+			glGetProgramInfoLog(programId, infoLogLength, &charsWritten, infoLog.get());
+			message = std::string(infoLog.get());
+		}
+
+		std::cout << L"GL_INFO_LOG: " << message;
+		return 0;
+	} 
+
+	glDetachShader(programId, vertex_shader_id);
+	glDetachShader(programId, fragment_shader_id);
+	if (HasGeometryShader())
+	{
+		glDetachShader(programId, geometry_shader_id);
+	}
+
+	return linkStatus;
+}
+
 void GLProgram::CompileAndLink()
 {
 	bool VertexShaderCompiled   = CompileAndPrintStatus(vertex_shader_id)   == GL_TRUE;
@@ -90,33 +135,8 @@ void GLProgram::CompileAndLink()
 	{
 		std::cout << L"Failed to compile shaders\n";
 	}
-	else
+	else if (LinkAndPrintStatus() == GL_TRUE)
 	{
-		glAttachShader(programId, vertex_shader_id);
-		glAttachShader(programId, fragment_shader_id);
-		if (HasGeometryShader())
-		{
-			glAttachShader(programId, geometry_shader_id);
-		}
-		glLinkProgram(programId);
-
-		int infoLogLength = 0;
-		glGetProgramiv(programId, GL_LINK_STATUS, &infoLogLength);
-		if (infoLogLength > 0) {
-			wprintf(L"\r\nSomething went wrong in linkage");
-			//fprintf(stderr, "ERROR: could not link shader program GL index %u\n",
-			//	shader_program);
-
-			//const int max_length = 2048;
-			//int actual_length = 0;
-			//char plog[2048];
-			//glGetProgramInfoLog(shader_program, max_length, &actual_length, plog);
-			//fprintf(stderr, "program info log for GL index %u:\n%s", shader_program, plog);
-
-			//glDeleteProgram(shader_program);
-			//return 0;
-		}
-
 		// These attributes are bound by default
 		glBindAttribLocation(programId, 0, "vertexPosition");
 		glBindAttribLocation(programId, 1, "vertexTCoord");

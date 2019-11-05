@@ -58,6 +58,7 @@ public:
 	void LoadFragmentShader(std::string shaderText);
 	void LoadVertexShader(std::string shaderText);
 	void LoadGeometryShader(std::string shaderText);
+	GLint LinkAndPrintStatus();
 	void CompileAndLink();
 	void Use();
 	GLuint Id();
