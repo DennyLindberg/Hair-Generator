@@ -7,16 +7,19 @@ uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 cameraPosition;
 
-in vec3 gvPosition;
-in vec3 gvNormal;
-in vec4 gvColor;
-in vec4 gvTCoord;
+in VertexAttrib
+{
+    vec3 position;
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} vertexout;
 
 void main() 
 {
-    vec3 lightDir = normalize(lightPosition-gvPosition);
-    vec3 camDir = normalize(cameraPosition-gvPosition);
-    vec3 normal = normalize(gvNormal);
+    vec3 lightDir = normalize(lightPosition-vertexout.position);
+    vec3 camDir = normalize(cameraPosition-vertexout.position);
+    vec3 normal = normalize(vertexout.normal);
 
     // Give ambient regions some depth
     float cameraContrib = clamp(dot(normal, camDir), 0.0, 1.0);

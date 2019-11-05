@@ -7,18 +7,18 @@ layout(location = 3) in vec4 vertexTCoord;
 
 uniform mat4 mvp;
 
-out vec3 vPosition;
-out vec3 vNormal;
-out vec4 vColor;
-out vec4 vTCoord;
+out VertexAttrib
+{
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} vertex;
 
 void main()
 {
     gl_Position = mvp * vec4(vertexPosition, 1.0f);
-    vPosition = vertexPosition;
 
-    vNormal = vertexNormal;
-
-    vColor = vertexColor;
-    vTCoord = vertexTCoord;
+    vertex.normal = vertexNormal;
+    vertex.color = vertexColor;
+    vertex.tcoord = vertexTCoord;
 }

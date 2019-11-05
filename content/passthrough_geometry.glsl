@@ -3,15 +3,20 @@
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
-in vec3 vPosition[];
-in vec3 vNormal[];
-in vec4 vColor[];
-in vec4 vTCoord[];
+in VertexAttrib
+{
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} vertex[];
 
-out vec3 gvPosition;
-out vec3 gvNormal;
-out vec4 gvColor;
-out vec4 gvTCoord;
+out VertexAttrib
+{
+    vec3 position;
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} vertexout;
 
 void main()
 {
@@ -19,7 +24,7 @@ void main()
     vec3 avgNormal = vec3(0.0);
     for (int i=0; i<gl_in.length(); i++)
     {
-        avgNormal += vNormal[i];
+        avgNormal += vertex[i].normal;
     }
     avgNormal /= gl_in.length();
 
@@ -27,10 +32,11 @@ void main()
     for (int i=0; i<gl_in.length(); i++)
     {
         gl_Position = gl_in[i].gl_Position;
-        gvPosition = vPosition[i];
-        gvNormal = avgNormal; //vNormal[i];
-        gvColor = vColor[i];
-        gvTCoord = vTCoord[i];
+
+        vertexout.position = gl_in[i].gl_Position.xyz;
+        vertexout.normal = avgNormal;//vertex[i].normal;
+        vertexout.color = vertex[i].color;
+        vertexout.tcoord = vertex[i].tcoord;
         EmitVertex();
     }
     EndPrimitive();
