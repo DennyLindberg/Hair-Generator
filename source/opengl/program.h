@@ -43,6 +43,7 @@ protected:
 	GLuint programId = 0;
 	GLint vertex_shader_id = 0;
 	GLint fragment_shader_id = 0;
+	GLint geometry_shader_id = -1; // optional
 
 	GLint mvpId = 0;
 	std::map<std::string, UniformFloat> floatUniforms;
@@ -53,8 +54,10 @@ public:
 	GLProgram();
 	~GLProgram();
 
+	bool HasGeometryShader() { return geometry_shader_id != -1; }
 	void LoadFragmentShader(std::string shaderText);
 	void LoadVertexShader(std::string shaderText);
+	void LoadGeometryShader(std::string shaderText);
 	void CompileAndLink();
 	void Use();
 	GLuint Id();

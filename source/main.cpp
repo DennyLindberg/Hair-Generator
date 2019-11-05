@@ -109,7 +109,7 @@ printf(R"(
 	defaultTexture.UseForDrawing();
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram defaultShader, lineShader, treeShader, leafShader, phongShader, backgroundShader;
+	GLProgram defaultShader, lineShader, treeShader, leafShader, phongShader, backgroundShader, geometryShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(contentFolder);
 	shaderManager.LoadShader(defaultShader, L"basic_vertex.glsl", L"basic_fragment.glsl");
@@ -117,12 +117,18 @@ printf(R"(
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
+	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment_postgeometry.glsl", L"passthrough_geometry.glsl");
+
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 	glm::vec3 lightPosition{ 999999.0f };
 	phongShader.Use(); 
 	phongShader.SetUniformVec4("lightColor", lightColor);
 	phongShader.SetUniformVec3("lightPosition", lightPosition);
+
+	geometryShader.Use();
+	geometryShader.SetUniformVec4("lightColor", lightColor);
+	geometryShader.SetUniformVec3("lightPosition", lightPosition);
 
 	/*
 		Load mesh
@@ -251,9 +257,9 @@ printf(R"(
 		glm::mat4 mvp = projection;// *branchMeshes.transform.ModelMatrix();
 
 		// Render mesh
-		phongShader.Use();
-		phongShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		phongShader.UpdateMVP(mvp);
+		geometryShader.Use();
+		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition());
+		geometryShader.UpdateMVP(mvp);
 		dummymesh.Draw();
 
 		// Grid

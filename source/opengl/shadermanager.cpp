@@ -9,32 +9,41 @@ void ShaderManager::InitializeFolder(std::filesystem::path shaderFolder)
 	fileListener.StartThread(shaderFolder);
 }
 
-void ShaderManager::LoadLiveShader(GLProgram& targetProgram, std::wstring vertexFilename, std::wstring fragmentFilename)
+void ShaderManager::LoadLiveShader(GLProgram& targetProgram, std::wstring vertexFilename, std::wstring fragmentFilename, std::wstring geometryFilename)
 {
-	LoadShader(targetProgram, vertexFilename, fragmentFilename);
+	LoadShader(targetProgram, vertexFilename, fragmentFilename, geometryFilename);
 
-	bool isVertexShader = true;
 	fileListener.Bind(
 		vertexFilename,
-		[this, &targetProgram, isVertexShader](fs::path filePath) -> void
+		[this, &targetProgram](fs::path filePath) -> void
 		{
-			this->UpdateShader(targetProgram, filePath, isVertexShader);
+			this->UpdateShader(targetProgram, filePath, ShaderType::VERTEX);
 		}
 	);
 
-	isVertexShader = false;
 	fileListener.Bind(
 		fragmentFilename,
-		[this, &targetProgram, isVertexShader](fs::path filePath) -> void
+		[this, &targetProgram](fs::path filePath) -> void
 		{
-			this->UpdateShader(targetProgram, filePath, isVertexShader);
+			this->UpdateShader(targetProgram, filePath, ShaderType::FRAGMENT);
 		}
 	);
+
+	if (geometryFilename != L"")
+	{
+		fileListener.Bind(
+			geometryFilename,
+			[this, &targetProgram](fs::path filePath) -> void
+			{
+				this->UpdateShader(targetProgram, filePath, ShaderType::GEOMETRY);
+			}
+		);
+	}
 }
 
-void ShaderManager::LoadShader(GLProgram& targetProgram, std::wstring vertexFilename, std::wstring fragmentFilename)
+void ShaderManager::LoadShader(GLProgram& targetProgram, std::wstring vertexFilename, std::wstring fragmentFilename, std::wstring geometryFilename)
 {
-	std::string fragment, vertex;
+	std::string fragment, vertex, geometry;
 	if (!LoadText(rootFolder/vertexFilename, vertex))
 	{
 		wprintf(L"\r\nFailed to read shader: %Ls\r\n", vertexFilename.c_str());
@@ -47,37 +56,64 @@ void ShaderManager::LoadShader(GLProgram& targetProgram, std::wstring vertexFile
 		return;
 	}
 
+	bool bShouldLoadGeometryShader = (geometryFilename != L"");
+	if (bShouldLoadGeometryShader)
+	{
+		if (!LoadText(rootFolder/geometryFilename, geometry))
+		{
+			wprintf(L"\r\nFailed to read shader: %Ls\r\n", geometryFilename.c_str());
+			return;
+		}
+	}
 
 	targetProgram.LoadFragmentShader(fragment);
 	targetProgram.LoadVertexShader(vertex);
+	if (bShouldLoadGeometryShader)
+	{
+		targetProgram.LoadGeometryShader(geometry);
+	}
 	targetProgram.CompileAndLink();
 }
 
-void ShaderManager::UpdateShader(GLProgram& targetProgram, fs::path filePath, bool isVertexShader)
+void ShaderManager::UpdateShader(GLProgram& targetProgram, fs::path filePath, ShaderType type)
 {
-	wprintf(
-		L"\r\n%Ls shader updated: %Ls\r\n", 
-		(isVertexShader? L"Vertex" : L"Fragment"),
-		filePath.c_str()
-	);
-
 	std::string text;
 	if (!LoadText(filePath, text))
 	{
-		wprintf(L"\r\nFailed to read file: %Ls\r\n", filePath.c_str());
+		wprintf(L"\r\nUpdateShader failed to read file: %Ls\r\n", filePath.c_str());
 		return;
 	}
 
 	printf("\r\n=======\r\n%s\r\n=======\r\n\r\n", text.c_str());
-	if (isVertexShader)
+	std::wstring MessageType = L"";
+	switch (type)
 	{
+	case ShaderType::VERTEX:
+	{
+		MessageType = L"Vertex";
 		targetProgram.LoadVertexShader(text);
+		break;
 	}
-	else
+	case ShaderType::FRAGMENT:
 	{
+		MessageType = L"Fragment";
 		targetProgram.LoadFragmentShader(text);
+		break;
+	}
+	case ShaderType::GEOMETRY:
+	{
+		MessageType = L"Geometry";
+		targetProgram.LoadGeometryShader(text);
+		break;
+	}
 	}
 	targetProgram.CompileAndLink();
+
+	wprintf(
+		L"\r\n%Ls shader updated: %Ls\r\n", 
+		MessageType.c_str(),
+		filePath.c_str()
+	);
 }
 
 void ShaderManager::CheckLiveShaders()

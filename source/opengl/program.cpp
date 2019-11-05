@@ -8,6 +8,7 @@ GLProgram::GLProgram()
 	programId = glCreateProgram();
 	fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
 	vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
+	// geometry_shader_id created on LoadGeometryShader (as it is optional)
 }
 
 GLProgram::~GLProgram()
@@ -15,6 +16,11 @@ GLProgram::~GLProgram()
 	glDeleteProgram(programId);
 	glDeleteShader(vertex_shader_id);
 	glDeleteShader(fragment_shader_id);
+
+	if (HasGeometryShader())
+	{
+		glDeleteShader(geometry_shader_id);
+	}
 }
 
 void GLProgram::LoadFragmentShader(std::string shaderText)
@@ -29,6 +35,15 @@ void GLProgram::LoadVertexShader(std::string shaderText)
 	GLint sourceLength = (GLint)shaderText.size();
 	const char *vertexSourcePtr = shaderText.c_str();
 	glShaderSource(vertex_shader_id, 1, &vertexSourcePtr, &sourceLength);
+}
+
+void GLProgram::LoadGeometryShader(std::string shaderText)
+{
+	geometry_shader_id = glCreateShader(GL_GEOMETRY_SHADER);
+
+	GLint sourceLength = (GLint)shaderText.size();
+	const char* geometrySourcePtr = shaderText.c_str();
+	glShaderSource(geometry_shader_id, 1, &geometrySourcePtr, &sourceLength);
 }
 
 GLint CompileAndPrintStatus(GLuint glShaderId)
@@ -63,8 +78,15 @@ GLint CompileAndPrintStatus(GLuint glShaderId)
 
 void GLProgram::CompileAndLink()
 {
-	if (CompileAndPrintStatus(vertex_shader_id) == GL_FALSE ||
-		CompileAndPrintStatus(fragment_shader_id) == GL_FALSE)
+	bool VertexShaderCompiled   = CompileAndPrintStatus(vertex_shader_id)   == GL_TRUE;
+	bool FragmentShaderCompiled = CompileAndPrintStatus(fragment_shader_id) == GL_TRUE;
+	bool GeometryShaderCompiled = true; // optional
+	if (HasGeometryShader())
+	{
+		GeometryShaderCompiled = CompileAndPrintStatus(geometry_shader_id) == GL_TRUE;
+	}
+
+	if (!VertexShaderCompiled || !FragmentShaderCompiled || !GeometryShaderCompiled)
 	{
 		std::cout << L"Failed to compile shaders\n";
 	}
@@ -72,7 +94,28 @@ void GLProgram::CompileAndLink()
 	{
 		glAttachShader(programId, vertex_shader_id);
 		glAttachShader(programId, fragment_shader_id);
+		if (HasGeometryShader())
+		{
+			glAttachShader(programId, geometry_shader_id);
+		}
 		glLinkProgram(programId);
+
+		int infoLogLength = 0;
+		glGetProgramiv(programId, GL_LINK_STATUS, &infoLogLength);
+		if (infoLogLength > 0) {
+			wprintf(L"\r\nSomething went wrong in linkage");
+			//fprintf(stderr, "ERROR: could not link shader program GL index %u\n",
+			//	shader_program);
+
+			//const int max_length = 2048;
+			//int actual_length = 0;
+			//char plog[2048];
+			//glGetProgramInfoLog(shader_program, max_length, &actual_length, plog);
+			//fprintf(stderr, "program info log for GL index %u:\n%s", shader_program, plog);
+
+			//glDeleteProgram(shader_program);
+			//return 0;
+		}
 
 		// These attributes are bound by default
 		glBindAttribLocation(programId, 0, "vertexPosition");
