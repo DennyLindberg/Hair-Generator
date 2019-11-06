@@ -108,24 +108,24 @@ printf(R"(
 	GLTexture defaultTexture{contentFolder / "default.png"};
 	defaultTexture.UseForDrawing();
 
+	// Uniform Buffer Object containing matrices
+	glm::mat4 identity_transform{ 1.0f };
+	GLUBO CameraUBO;
+	CameraUBO.Bind(1);
+	CameraUBO.Allocate(16 * 8); // 2 matrices => 8 columns => 16 bytes per column
+
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram defaultShader, lineShader, treeShader, leafShader, phongShader, backgroundShader, geometryShader;
+	GLProgram lineShader, backgroundShader, geometryShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(contentFolder);
-	shaderManager.LoadShader(defaultShader, L"basic_vertex.glsl", L"basic_fragment.glsl");
-	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl");
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
-	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment_postgeometry.glsl", L"passthrough_geometry.glsl");
+	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 	glm::vec3 lightPosition{ 999999.0f };
-	phongShader.Use(); 
-	phongShader.SetUniformVec4("lightColor", lightColor);
-	phongShader.SetUniformVec3("lightPosition", lightPosition);
-
 	geometryShader.Use();
 	geometryShader.SetUniformVec4("lightColor", lightColor);
 	geometryShader.SetUniformVec3("lightPosition", lightPosition);
@@ -253,22 +253,24 @@ printf(R"(
 		
 		// Determine scene render properties
 		glPolygonMode(GL_FRONT_AND_BACK, (renderWireframe? GL_LINE : GL_FILL));
-		glm::mat4 projection = camera.ViewProjectionMatrix();
-		glm::mat4 mvp = projection;// *branchMeshes.transform.ModelMatrix();
+		glm::mat4 viewmatrix = camera.ViewMatrix();
+		glm::mat4 projectionmatrix = camera.ProjectionMatrix();
+		CameraUBO.SetData(glm::value_ptr(projectionmatrix), 0, 64);
+		CameraUBO.SetData(glm::value_ptr(viewmatrix), 64, 64);
 
 		// Render mesh
 		geometryShader.Use();
-		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition());
-		geometryShader.UpdateMVP(mvp);
+		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition()); // todo: expand UBO
+		geometryShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
 		dummymesh.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		grid.Draw(projection);
+		grid.Draw(projectionmatrix * viewmatrix);
 		
 		// Skeleton and coordinate axes
 		glClear(GL_DEPTH_BUFFER_BIT);
-		lineShader.UpdateMVP(projection);
+		lineShader.UpdateModelMatrix(identity_transform);
 		lineShader.Use();
 		coordinateReferenceLines.Draw();
 		if (renderTransformHierarchy)

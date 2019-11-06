@@ -1,4 +1,4 @@
-#version 330
+#version 420 core
 
 layout(location = 0) out vec4 color;
 
@@ -7,16 +7,19 @@ uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 cameraPosition;
 
-in vec3 vPosition;
-in vec3 vNormal;
-in vec4 vColor;
-in vec4 vTCoord;
+in VertexAttrib
+{
+    vec3 position;
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} fragment;
 
 void main() 
 {
-    vec3 lightDir = normalize(lightPosition-vPosition);
-    vec3 camDir = normalize(cameraPosition-vPosition);
-    vec3 normal = normalize(vNormal);
+    vec3 lightDir = normalize(lightPosition-fragment.position);
+    vec3 camDir = normalize(cameraPosition-fragment.position);
+    vec3 normal = normalize(fragment.normal);
 
     // Give ambient regions some depth
     float cameraContrib = clamp(dot(normal, camDir), 0.0, 1.0);
@@ -32,7 +35,7 @@ void main()
 
     vec4 totalLightContribution = vec4(ambientLight + diffuseLight + specularLight, 1.0);
 
-    //vec3 texSample = texture(textureSampler, vTCoord.rg).rgb; // ignore alpha
+    //vec3 texSample = texture(textureSampler, gvTCoord.rg).rgb; // ignore alpha
     //color = totalLightContribution * vec4(texSample, 1.0f);
 
     color = totalLightContribution * vec4(0.5f, 0.5f, 0.5f, 1.0f);

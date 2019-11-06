@@ -3,6 +3,30 @@
 #include <string>
 #include <iostream>
 
+GLUBO::GLUBO()
+{
+	glGenBuffers(1, &uboId);
+}
+
+GLUBO::~GLUBO()
+{
+	glDeleteBuffers(1, &uboId);
+}
+
+void GLUBO::Bind(GLuint point)
+{
+	glBindBufferBase(GL_UNIFORM_BUFFER, point, uboId);
+}
+
+void GLUBO::Allocate(GLuint numbytes)
+{
+	glBindBuffer(GL_UNIFORM_BUFFER, uboId);
+	glBufferData(GL_UNIFORM_BUFFER, numbytes, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	allocated_size = numbytes;
+}
+
 GLProgram::GLProgram()
 {
 	programId = glCreateProgram();
@@ -158,10 +182,10 @@ GLuint GLProgram::Id()
 	return programId;
 }
 
-void GLProgram::UpdateMVP(glm::mat4& mvp)
+void GLProgram::UpdateModelMatrix(glm::mat4& model)
 {
 	Use();
-	glUniformMatrix4fv(mvpId, 1, GL_FALSE, &mvp[0][0]);
+	glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, &model[0][0]);
 }
 
 void GLProgram::SetUniformFloat(std::string name, float value)
@@ -222,10 +246,10 @@ void GLProgram::ReloadUniforms()
 {
 	Use();
 
-	mvpId = glGetUniformLocation(programId, "mvp");
+	model_matrix_id = glGetUniformLocation(programId, "model");
 
 	glm::mat4 identity{ 1.0f };
-	UpdateMVP(identity);
+	UpdateModelMatrix(identity);
 
 	for (auto& u : floatUniforms)
 	{
@@ -245,4 +269,3 @@ void GLProgram::ReloadUniforms()
 		u.second.Upload();
 	}
 }
-

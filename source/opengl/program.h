@@ -37,6 +37,32 @@ struct UniformVec4
 	}
 };
 
+class GLUBO
+{
+protected:
+	GLuint uboId = 0;
+	GLuint allocated_size = 0;
+
+public:
+	GLUBO();
+	~GLUBO();
+
+	// Set point to the same binding value as used in the glsl shader
+	void Bind(GLuint point);
+
+	void Allocate(GLuint numbytes);
+
+	template<typename T>
+	void SetData(T* data, GLuint offset, GLuint numbytes)
+	{
+		assert((offset+numbytes) <= allocated_size);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, uboId);
+		glBufferSubData(GL_UNIFORM_BUFFER, offset, numbytes, data);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	}
+};
+
 class GLProgram
 {
 protected:
@@ -45,7 +71,7 @@ protected:
 	GLint fragment_shader_id = 0;
 	GLint geometry_shader_id = -1; // optional
 
-	GLint mvpId = 0;
+	GLint model_matrix_id = 0;
 	std::map<std::string, UniformFloat> floatUniforms;
 	std::map<std::string, UniformVec3> vec3Uniforms;
 	std::map<std::string, UniformVec4> vec4Uniforms;
@@ -62,7 +88,7 @@ public:
 	void CompileAndLink();
 	void Use();
 	GLuint Id();
-	void UpdateMVP(glm::mat4& mvp);
+	void UpdateModelMatrix(glm::mat4& model);
 	void SetUniformFloat(std::string name, float value);
 	void SetUniformVec3(std::string name, glm::fvec3 value);
 	void SetUniformVec4(std::string name, glm::fvec4 value);
