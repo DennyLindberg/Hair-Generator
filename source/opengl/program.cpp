@@ -39,7 +39,10 @@ void GLProgram::LoadVertexShader(std::string shaderText)
 
 void GLProgram::LoadGeometryShader(std::string shaderText)
 {
-	geometry_shader_id = glCreateShader(GL_GEOMETRY_SHADER);
+	if (!HasGeometryShader())
+	{
+		geometry_shader_id = glCreateShader(GL_GEOMETRY_SHADER);
+	}
 
 	GLint sourceLength = (GLint)shaderText.size();
 	const char* geometrySourcePtr = shaderText.c_str();
