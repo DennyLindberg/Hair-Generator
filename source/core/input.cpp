@@ -92,7 +92,7 @@ void TurntableController::UpdateCamera()
 	}
 	else
 	{
-		camera->flipUpDirection = (abs(pitch) > 90.0f && abs(pitch) < 270.0f);
+		camera->flipUpDirection = (abs(pitch) >= 90.0f && abs(pitch) <= 270.0f);
 	}
 
 	camera->SetPosition(position + PlacementVector(yaw, pitch) * distance);

@@ -18,8 +18,9 @@ layout(location = 3) in vec4 vertexTCoord;
 // With the calculated offset values, based on the rules of the std140 layout, we can fill the buffer with the variable data at each offset using functions like glBufferSubData.
 layout (std140, binding = 1) uniform Camera
 {
-    mat4 projection;    // 0 Column1, 16 Column2, 32 Column3, 48 Column4
-    mat4 view;          // 64 Column1, 80 Column2, 96 Column3, 112 Column4
+    mat4 projection;       // 0 Column1, 16 Column2, 32 Column3, 48 Column4
+    mat4 view;             // 64 Column1, 80 Column2, 96 Column3, 112 Column4
+    vec3 camera_position;  // 128
 };
 uniform mat4 model;
 
@@ -37,7 +38,7 @@ void main()
     mat4 mvp = projection * view * model;
     gl_Position = mvp * vec4(vertexPosition, 1.0f);
 
-    vertex.position = (model * gl_Position).xyz;
+    vertex.position = (model * vec4(vertexPosition, 1.0f)).xyz;
     vertex.normal = (model * vec4(vertexNormal, 0.0f)).xyz;
     vertex.color = vertexColor;
     vertex.tcoord = vertexTCoord;

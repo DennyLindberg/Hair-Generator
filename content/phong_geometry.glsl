@@ -3,6 +3,7 @@
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
+// World space attributes
 in VertexAttrib
 {
     vec3 position; // discarded
@@ -11,6 +12,7 @@ in VertexAttrib
     vec4 tcoord;
 } vertex[];
 
+// World space attributes
 out VertexAttrib
 {
     vec3 position;
@@ -35,7 +37,8 @@ void main()
         gl_Position = gl_in[i].gl_Position;
 
         vertexout.position = gl_in[i].gl_Position.xyz;
-        vertexout.normal = avgNormal;//vertex[i].normal;
+        //vertexout.normal = avgNormal;
+        vertexout.normal = vertex[i].normal;
         vertexout.color = vertex[i].color;
         vertexout.tcoord = vertex[i].tcoord;
         EmitVertex();

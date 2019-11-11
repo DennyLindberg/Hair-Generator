@@ -5,8 +5,9 @@ layout(location = 2) in vec4 vertexColor;
 
 layout (std140, binding = 1) uniform Camera
 {
-    mat4 projection;    // 0 Column1, 16 Column2, 32 Column3, 48 Column4
-    mat4 view;          // 64 Column1, 80 Column2, 96 Column3, 112 Column4
+    mat4 projection;       // 0 Column1, 16 Column2, 32 Column3, 48 Column4
+    mat4 view;             // 64 Column1, 80 Column2, 96 Column3, 112 Column4
+    vec3 camera_position;  // 128
 };
 uniform mat4 model;
 
@@ -26,6 +27,6 @@ out VertexAttrib
 void main()
 {
     gl_Position = transformVerticesInVertexShader? projection * view * model * vec4(vertexPosition, 1.0f) : vec4(vertexPosition, 1.0f);
-    vertex.position = (model * gl_Position).xyz;
+    vertex.position = transformVerticesInVertexShader? (model * gl_Position).xyz : gl_Position.xyz;
     vertex.color = useUniformColor? uniformColor : vertexColor;
 }
