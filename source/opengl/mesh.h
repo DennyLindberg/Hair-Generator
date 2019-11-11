@@ -105,6 +105,31 @@ public:
 	void Draw();
 };
 
+class GLLineStrips : public GLMeshInterface
+{
+protected:
+	const GLuint RESTART_INDEX = 0xFFFF;
+
+	GLuint positionBuffer = 0;
+	GLuint indexBuffer = 0;
+
+	unsigned int numStrips = 0;
+	std::vector<glm::fvec3> lineStrips; // each line strip is separated by the RESTART_INDEX
+	std::vector<unsigned int> indices;
+
+public:
+	GLLineStrips();
+	~GLLineStrips();
+
+	void AddLineStrip(const std::vector<glm::fvec3>& points);
+
+	void Clear();
+
+	void SendToGPU();
+
+	void Draw();
+};
+
 class GLQuad : public GLMeshInterface
 {
 protected:

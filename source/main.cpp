@@ -131,6 +131,33 @@ printf(R"(
 	geometryShader.SetUniformVec3("lightPosition", lightPosition);
 
 	/*
+		Create line strips for testing
+	*/
+	GLLineStrips lineStrips;
+	std::vector<glm::fvec3> lineStripsPoints1 = {
+		glm::fvec3{0.0f, 0.0f, -0.0f},
+		glm::fvec3{0.1f, 0.0f, -0.05f},
+		glm::fvec3{0.2f, 0.0f, -0.4f},
+		glm::fvec3{0.3f, 0.0f, -0.6f}
+	};
+	std::vector<glm::fvec3> lineStripsPoints2 = {
+		glm::fvec3{0.0f, 0.1f, -0.0f},
+		glm::fvec3{0.1f, 0.1f, -0.05f},
+		glm::fvec3{0.2f, 0.1f, -0.4f},
+		glm::fvec3{0.3f, 0.1f, -0.6f}
+	};
+	std::vector<glm::fvec3> lineStripsPoints3 = {
+		glm::fvec3{0.0f, 0.2f, -0.0f},
+		glm::fvec3{0.1f, 0.2f, -0.05f},
+		glm::fvec3{0.2f, 0.2f, -0.4f},
+		glm::fvec3{0.3f, 0.2f, -0.6f}
+	};
+	lineStrips.AddLineStrip(lineStripsPoints1);
+	lineStrips.AddLineStrip(lineStripsPoints2);
+	lineStrips.AddLineStrip(lineStripsPoints3);
+	lineStrips.SendToGPU();
+
+	/*
 		Load mesh
 	*/
 	GLTriangleMesh dummymesh;
@@ -272,6 +299,7 @@ printf(R"(
 		glClear(GL_DEPTH_BUFFER_BIT);
 		lineShader.UpdateModelMatrix(identity_transform);
 		lineShader.Use();
+		lineShader.SetUniformFloat("useUniformColor", false);
 		coordinateReferenceLines.Draw();
 		if (renderTransformHierarchy)
 		{
@@ -293,6 +321,11 @@ printf(R"(
 
 			hierarchyAxisLines.Draw();
 		}
+
+		// Line strips
+		lineShader.SetUniformFloat("useUniformColor", true);
+		lineShader.SetUniformVec4("uniformColor", glm::fvec4{0.0f, 1.0f, 0.0f, 1.0f});
+		lineStrips.Draw();
 
 		// Done
 		window.SwapFramebuffer();

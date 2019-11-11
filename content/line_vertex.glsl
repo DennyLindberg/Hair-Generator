@@ -9,11 +9,13 @@ layout (std140, binding = 1) uniform Camera
     mat4 view;          // 64 Column1, 80 Column2, 96 Column3, 112 Column4
 };
 uniform mat4 model;
+uniform bool useUniformColor = false;
+uniform vec4 uniformColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 out vec4 vcolor;
 
 void main()
 {
     gl_Position = projection * view * model * vec4(vertexPosition, 1.0f);
-    vcolor = vertexColor;
+    vcolor = useUniformColor? uniformColor : vertexColor;
 }

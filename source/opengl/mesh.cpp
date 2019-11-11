@@ -282,6 +282,101 @@ void GLLine::Draw()
 }
 
 
+GLLineStrips::GLLineStrips()
+{
+	glBindVertexArray(vao);
+
+	// Generate buffers
+	glGenBuffers(1, &positionBuffer);
+	glGenBuffers(1, &indexBuffer);
+	
+	// Load positions
+	int valuesPerPosition = 3; // glm::fvec3 has 3 floats
+	glEnableVertexAttribArray(positionAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+	glVertexAttribPointer(positionAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
+	// Index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+	SendToGPU();
+}
+
+GLLineStrips::~GLLineStrips()
+{
+	glDeleteBuffers(1, &positionBuffer);
+	glDeleteBuffers(1, &indexBuffer);
+}
+
+void GLLineStrips::AddLineStrip(const std::vector<glm::fvec3>& points)
+{
+	if (points.size() == 0)
+	{
+		return; // because there is no data to add
+	}
+
+	size_t newLineStart = lineStrips.size();
+	size_t newIndicesStart = indices.size();
+
+	numStrips++;
+	lineStrips.resize(lineStrips.size() + points.size());
+	indices.resize(indices.size() + points.size() + 1); // include restart_index at the end
+	for (size_t i = 0; i < points.size(); ++i)
+	{
+		lineStrips[newLineStart + i] = points[i];
+		indices[newIndicesStart + i] = static_cast<unsigned int>(newLineStart + i);
+	}
+
+	indices[indices.size()-1] = RESTART_INDEX;
+}
+
+void GLLineStrips::Clear()
+{
+	lineStrips.clear();
+	indices.clear();
+
+	lineStrips.shrink_to_fit();
+	indices.shrink_to_fit();
+
+	SendToGPU();
+}
+
+void GLLineStrips::SendToGPU()
+{
+	glBindVertexArray(vao);
+
+	// Positions
+	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, lineStrips, GL_STATIC_DRAW);
+
+	// Indices
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+	glBufferVector(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW);
+}
+
+void GLLineStrips::Draw()
+{
+	if (lineStrips.size() == 0 || indices.size() == 0)
+	{
+		return; // because there is no data to render
+	}
+
+	/*
+		See these references for primitive restart
+			https://www.khronos.org/opengl/wiki/Vertex_Rendering#Common
+			https://gist.github.com/roxlu/51fc685b0303ee55c05b3ad96992f3ec
+	*/
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(RESTART_INDEX);
+
+	{
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+		glDrawElements(GL_LINE_STRIP, GLsizei(indices.size()), GL_UNSIGNED_INT, (GLvoid*)0);
+	}
+
+	glDisable(GL_PRIMITIVE_RESTART);
+}
 
 
 

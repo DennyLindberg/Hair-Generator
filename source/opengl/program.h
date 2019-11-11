@@ -61,6 +61,12 @@ public:
 		glBufferSubData(GL_UNIFORM_BUFFER, offset, numbytes, data);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
+
+	/*
+		See this article for a more efficient way of setting up
+		an UBO with a struct and memcpy.
+		https://www.geeks3d.com/20140704/gpu-buffers-introduction-to-opengl-3-1-uniform-buffers-objects/
+	*/
 };
 
 class GLProgram
