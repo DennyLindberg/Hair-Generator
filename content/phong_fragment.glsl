@@ -2,11 +2,19 @@
 
 layout(location = 0) out vec4 color;
 
+layout (std140, binding = 1) uniform Camera
+{
+    mat4 projection;    // 0 Column1, 16 Column2, 32 Column3, 48 Column4
+    mat4 view;          // 64 Column1, 80 Column2, 96 Column3, 112 Column4
+};
+uniform mat4 model;
+
 uniform sampler2D textureSampler;
 uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 cameraPosition;
 
+// World space attributes
 in VertexAttrib
 {
     vec3 position;
@@ -39,4 +47,5 @@ void main()
     //color = totalLightContribution * vec4(texSample, 1.0f);
 
     color = totalLightContribution * vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    //color = fragment.color;
 }

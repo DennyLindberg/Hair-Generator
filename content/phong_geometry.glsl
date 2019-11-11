@@ -5,6 +5,7 @@ layout(triangle_strip, max_vertices = 3) out;
 
 in VertexAttrib
 {
+    vec3 position; // discarded
     vec3 normal;
     vec4 color;
     vec4 tcoord;

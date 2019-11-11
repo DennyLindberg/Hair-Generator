@@ -115,13 +115,14 @@ printf(R"(
 	CameraUBO.Allocate(16 * 8); // 2 matrices => 8 columns => 16 bytes per column
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram lineShader, backgroundShader, geometryShader;
+	GLProgram lineShader, backgroundShader, geometryShader, linestripToPlanesShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(contentFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
 	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
+	shaderManager.LoadLiveShader(linestripToPlanesShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -288,7 +289,8 @@ printf(R"(
 		// Render mesh
 		geometryShader.Use();
 		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition()); // todo: expand UBO
-		geometryShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
+		//dummymesh.transform.rotation.y = lastUpdate*360.0f;
+		geometryShader.UpdateModelMatrix(dummymesh.transform.ModelMatrix()); // todo: replace with SetMatrix4x4
 		dummymesh.Draw();
 
 		// Grid
@@ -297,8 +299,8 @@ printf(R"(
 		
 		// Skeleton and coordinate axes
 		glClear(GL_DEPTH_BUFFER_BIT);
-		lineShader.UpdateModelMatrix(identity_transform);
 		lineShader.Use();
+		lineShader.UpdateModelMatrix(identity_transform);
 		lineShader.SetUniformFloat("useUniformColor", false);
 		coordinateReferenceLines.Draw();
 		if (renderTransformHierarchy)
@@ -323,8 +325,11 @@ printf(R"(
 		}
 
 		// Line strips
-		lineShader.SetUniformFloat("useUniformColor", true);
-		lineShader.SetUniformVec4("uniformColor", glm::fvec4{0.0f, 1.0f, 0.0f, 1.0f});
+		linestripToPlanesShader.Use();
+		linestripToPlanesShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
+		linestripToPlanesShader.SetUniformFloat("useUniformColor", true);
+		linestripToPlanesShader.SetUniformFloat("transformVerticesInVertexShader", false);
+		linestripToPlanesShader.SetUniformVec4("uniformColor", glm::fvec4{0.0f, 1.0f, 0.0f, 1.0f});
 		lineStrips.Draw();
 
 		// Done

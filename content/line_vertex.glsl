@@ -9,13 +9,23 @@ layout (std140, binding = 1) uniform Camera
     mat4 view;          // 64 Column1, 80 Column2, 96 Column3, 112 Column4
 };
 uniform mat4 model;
+
+uniform bool transformVerticesInVertexShader = true;
 uniform bool useUniformColor = false;
 uniform vec4 uniformColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-out vec4 vcolor;
+// World space attributes
+out VertexAttrib
+{
+    vec3 position;
+    vec3 normal;
+    vec4 color;
+    vec4 tcoord;
+} vertex;
 
 void main()
 {
-    gl_Position = projection * view * model * vec4(vertexPosition, 1.0f);
-    vcolor = useUniformColor? uniformColor : vertexColor;
+    gl_Position = transformVerticesInVertexShader? projection * view * model * vec4(vertexPosition, 1.0f) : vec4(vertexPosition, 1.0f);
+    vertex.position = (model * gl_Position).xyz;
+    vertex.color = useUniformColor? uniformColor : vertexColor;
 }

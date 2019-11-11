@@ -23,8 +23,10 @@ layout (std140, binding = 1) uniform Camera
 };
 uniform mat4 model;
 
+// World space attributes
 out VertexAttrib
 {
+    vec3 position;
     vec3 normal;
     vec4 color;
     vec4 tcoord;
@@ -32,10 +34,11 @@ out VertexAttrib
 
 void main()
 {
-    //gl_Position = mvp * vec4(vertexPosition, 1.0f);
-    gl_Position = projection * view * model * vec4(vertexPosition, 1.0f);
+    mat4 mvp = projection * view * model;
+    gl_Position = mvp * vec4(vertexPosition, 1.0f);
 
-    vertex.normal = vertexNormal;
+    vertex.position = (model * gl_Position).xyz;
+    vertex.normal = (model * vec4(vertexNormal, 0.0f)).xyz;
     vertex.color = vertexColor;
     vertex.tcoord = vertexTCoord;
 }
