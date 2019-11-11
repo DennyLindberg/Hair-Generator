@@ -255,6 +255,8 @@ printf(R"(
 						 if (button == SDL_BUTTON_LEFT)   turntable.inputState = TurntableInputState::Rotate;
 					else if (button == SDL_BUTTON_MIDDLE) turntable.inputState = TurntableInputState::Translate;
 					else if (button == SDL_BUTTON_RIGHT)  turntable.inputState = TurntableInputState::Zoom;
+
+					turntable.OnBeginInput();
 				}
 			}
 			else if (event.type == SDL_MOUSEBUTTONUP)

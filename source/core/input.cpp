@@ -6,6 +6,11 @@ TurntableController::TurntableController(Camera& controlledCamera)
 	camera = &controlledCamera;
 }
 
+void TurntableController::OnBeginInput()
+{
+	bFlipYaw = camera->flipUpDirection;
+}
+
 void TurntableController::Set(float newYaw, float newPitch, float newDistance)
 {
 	yaw = newYaw;
@@ -16,7 +21,7 @@ void TurntableController::Set(float newYaw, float newPitch, float newDistance)
 
 void TurntableController::Offset(float yawOffset, float pitchOffset, float distanceOffset)
 {
-	yaw += camera->flipUpDirection? -yawOffset : yawOffset;
+	yaw += bFlipYaw? -yawOffset : yawOffset;
 	pitch += pitchOffset;
 	distance += distanceOffset;
 	UpdateCamera();

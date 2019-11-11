@@ -58,7 +58,7 @@ void main()
     vec4 p3t = vp * p3ws;
     vec4 p4t = vp * p4ws;
 
-    vertex.normal = (model * vec4(up, 0.0)).xyz;
+    vertex.normal = up;
     vertex.color = linepoint[0].color;
     vertex.tcoord = linepoint[0].color;
 
