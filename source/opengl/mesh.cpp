@@ -378,7 +378,167 @@ void GLLineStrips::Draw()
 	glDisable(GL_PRIMITIVE_RESTART);
 }
 
+GLBezierStrips::GLBezierStrips()
+{
+	const GLuint bezierPositionAttribId = 0;
+	const GLuint bezierNormalAttribId = 1;
+	const GLuint bezierTangentAttribId = 2;
+	const GLuint bezierWidthAttribId = 3;
 
+	glBindVertexArray(vao);
+
+	// Generate buffers
+	glGenBuffers(1, &positionBuffer);
+	glGenBuffers(1, &normalBuffer);
+	glGenBuffers(1, &tangentBuffer);
+	glGenBuffers(1, &widthBuffer);
+
+	glGenBuffers(1, &indexBuffer);
+
+	// Load positions
+	int valuesPerPosition = 3; // glm::fvec3 has 3 floats
+	glEnableVertexAttribArray(bezierPositionAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+	glVertexAttribPointer(bezierPositionAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
+	// Load normals
+	valuesPerPosition = 3;
+	glEnableVertexAttribArray(bezierNormalAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+	glVertexAttribPointer(bezierNormalAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
+	// Load tangents
+	valuesPerPosition = 3;
+	glEnableVertexAttribArray(bezierTangentAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, tangentBuffer);
+	glVertexAttribPointer(bezierTangentAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
+	// Load widths
+	valuesPerPosition = 1; // float
+	glEnableVertexAttribArray(bezierWidthAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, widthBuffer);
+	glVertexAttribPointer(bezierWidthAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
+	// Index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+	SendToGPU();
+}
+
+GLBezierStrips::~GLBezierStrips()
+{
+	glDeleteBuffers(1, &positionBuffer);
+	glDeleteBuffers(1, &normalBuffer);
+	glDeleteBuffers(1, &tangentBuffer);
+	glDeleteBuffers(1, &widthBuffer);
+
+	glDeleteBuffers(1, &indexBuffer);
+}
+
+void GLBezierStrips::AddBezierStrip(
+	const std::vector<glm::fvec3>& points,
+	const std::vector<glm::fvec3>& normals,
+	const std::vector<glm::fvec3>& tangents,
+	const std::vector<float>& widths
+)
+{
+	if (points.size() == 0)
+	{
+		return; // because there is no data to add
+	}
+
+	if (normals.size() != points.size() || tangents.size() != points.size() || widths.size() != points.size())
+	{
+		return; // because of size mismatch
+	}
+
+	size_t newLineStart = controlPoints.size();
+	size_t newIndicesStart = indices.size();
+
+	numStrips++;
+
+	size_t newVectorSize = controlPoints.size() + points.size();
+	controlPoints.resize(newVectorSize);
+	controlNormals.resize(newVectorSize);
+	controlTangents.resize(newVectorSize);
+	controlWidths.resize(newVectorSize);
+
+	indices.resize(indices.size() + points.size() + 1); // include restart_index at the end
+	for (size_t i = 0; i < points.size(); ++i)
+	{
+		controlPoints[newLineStart + i] = points[i];
+		controlNormals[newLineStart + i] = normals[i];
+		controlTangents[newLineStart + i] = tangents[i];
+		controlWidths[newLineStart + i] = widths[i];
+
+		indices[newIndicesStart + i] = static_cast<unsigned int>(newLineStart + i);
+	}
+
+	indices[indices.size() - 1] = RESTART_INDEX;
+}
+
+void GLBezierStrips::Clear()
+{
+	controlPoints.clear();
+	controlNormals.clear();
+	controlTangents.clear();
+	controlWidths.clear();
+
+	indices.clear();
+
+	controlPoints.shrink_to_fit();
+	controlNormals.shrink_to_fit();
+	controlTangents.shrink_to_fit();
+	controlWidths.shrink_to_fit();
+
+	indices.shrink_to_fit();
+
+	SendToGPU();
+}
+
+void GLBezierStrips::SendToGPU()
+{
+	glBindVertexArray(vao);
+
+	// Positions
+	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlPoints, GL_STATIC_DRAW);
+
+	// Normals
+	glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlNormals, GL_STATIC_DRAW);
+
+	// Tangents
+	glBindBuffer(GL_ARRAY_BUFFER, tangentBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlTangents, GL_STATIC_DRAW);
+
+	// Widths
+	glBindBuffer(GL_ARRAY_BUFFER, widthBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlWidths, GL_STATIC_DRAW);
+
+	// Indices
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+	glBufferVector(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW);
+}
+
+void GLBezierStrips::Draw()
+{
+	if (controlPoints.size() == 0 || indices.size() == 0)
+	{
+		return; // because there is no data to render
+	}
+
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(RESTART_INDEX);
+
+	{
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+		glDrawElements(GL_LINE_STRIP, GLsizei(indices.size()), GL_UNSIGNED_INT, (GLvoid*)0);
+	}
+
+	glDisable(GL_PRIMITIVE_RESTART);
+}
 
 void GLQuadProperties::MatchWindowDimensions()
 {

@@ -114,7 +114,7 @@ protected:
 	GLuint indexBuffer = 0;
 
 	unsigned int numStrips = 0;
-	std::vector<glm::fvec3> lineStrips; // each line strip is separated by the RESTART_INDEX
+	std::vector<glm::fvec3> lineStrips; // each line strip is separated by the RESTART_INDEX in indices
 	std::vector<unsigned int> indices;
 
 public:
@@ -122,6 +122,44 @@ public:
 	~GLLineStrips();
 
 	void AddLineStrip(const std::vector<glm::fvec3>& points);
+
+	void Clear();
+
+	void SendToGPU();
+
+	void Draw();
+};
+
+class GLBezierStrips : public GLMeshInterface
+{
+protected:
+	const GLuint RESTART_INDEX = 0xFFFF;
+
+	GLuint positionBuffer = 0;
+	GLuint normalBuffer = 0;
+	GLuint tangentBuffer = 0;
+	GLuint widthBuffer = 0;
+
+	GLuint indexBuffer = 0;
+
+	unsigned int numStrips = 0;
+	std::vector<glm::fvec3> controlPoints; // each curve is separated on the GPU by the RESTART_INDEX in indices
+	std::vector<glm::fvec3> controlNormals;
+	std::vector<glm::fvec3> controlTangents;
+	std::vector<float> controlWidths;
+
+	std::vector<unsigned int> indices;
+
+public:
+	GLBezierStrips();
+	~GLBezierStrips();
+
+	void AddBezierStrip(
+		const std::vector<glm::fvec3>& points,
+		const std::vector<glm::fvec3>& normals,
+		const std::vector<glm::fvec3>& tangents,
+		const std::vector<float>& widths
+	);
 
 	void Clear();
 

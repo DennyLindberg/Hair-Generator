@@ -119,14 +119,15 @@ printf(R"(
 	LightUBO.Allocate(16 * 2);
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram lineShader, backgroundShader, geometryShader, linestripToPlanesShader;
+	GLProgram lineShader, backgroundShader, geometryShader, linestripToBezierShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(shaderFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
 	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
-	shaderManager.LoadLiveShader(linestripToPlanesShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
+	//shaderManager.LoadLiveShader(linestripToBezierShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
+	shaderManager.LoadLiveShader(linestripToBezierShader, L"bezier_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_bezier_geometry.glsl");
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -137,29 +138,20 @@ printf(R"(
 	/*
 		Create line strips for testing
 	*/
-	GLLineStrips lineStrips;
-	std::vector<glm::fvec3> lineStripsPoints1 = {
-		glm::fvec3{0.0f, 0.0f, -0.0f},
-		glm::fvec3{0.1f, 0.0f, -0.05f},
-		glm::fvec3{0.2f, 0.0f, -0.4f},
-		glm::fvec3{0.3f, 0.0f, -0.6f}
-	};
-	std::vector<glm::fvec3> lineStripsPoints2 = {
-		glm::fvec3{0.0f, 0.1f, -0.0f},
-		glm::fvec3{0.1f, 0.1f, -0.05f},
-		glm::fvec3{0.2f, 0.1f, -0.4f},
-		glm::fvec3{0.3f, 0.1f, -0.6f}
-	};
-	std::vector<glm::fvec3> lineStripsPoints3 = {
-		glm::fvec3{0.0f, 0.2f, -0.0f},
-		glm::fvec3{0.1f, 0.2f, -0.05f},
-		glm::fvec3{0.2f, 0.2f, -0.4f},
-		glm::fvec3{0.3f, 0.2f, -0.6f}
-	};
-	lineStrips.AddLineStrip(lineStripsPoints1);
-	lineStrips.AddLineStrip(lineStripsPoints2);
-	lineStrips.AddLineStrip(lineStripsPoints3);
-	lineStrips.SendToGPU();
+	GLBezierStrips bezierStrips;
+	std::vector<glm::fvec3> bezierStripsPoints1   = {glm::fvec3{0.0f, 0.05f,  0.0f},  glm::fvec3{0.1f, 0.05f, -0.05f}, glm::fvec3{0.2f, 0.05f, -0.4f}};
+	std::vector<glm::fvec3> bezierStripsNormals1  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
+	std::vector<glm::fvec3> bezierStripsTangents1 = { bezierStripsPoints1[1]-bezierStripsPoints1[0], bezierStripsPoints1[2]-bezierStripsPoints1[1], bezierStripsPoints1[2]-bezierStripsPoints1[1] };
+	std::vector<float> bezierStripsWidths1        = { 0.1f, 0.05f, 0.02f };
+
+	std::vector<glm::fvec3> bezierStripsPoints2   = {glm::fvec3{0.0f, 0.1f, -0.0f},  glm::fvec3{0.1f, 0.1f, -0.05f}, glm::fvec3{0.2f, 0.1f, -0.4f}};
+	std::vector<glm::fvec3> bezierStripsNormals2  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
+	std::vector<glm::fvec3> bezierStripsTangents2 = { bezierStripsPoints1[1]-bezierStripsPoints1[0], bezierStripsPoints1[2]-bezierStripsPoints1[1], bezierStripsPoints1[2]-bezierStripsPoints1[1] };
+	std::vector<float> bezierStripsWidths2 = { 0.1f/2.0f, 0.05f/2.0f, 0.02f/2.0f };
+
+	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsWidths1);
+	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsWidths2);
+	bezierStrips.SendToGPU();
 
 	/*
 		Load mesh
@@ -294,21 +286,15 @@ printf(R"(
 
 		// Render mesh
 		geometryShader.Use();
-		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition()); // todo: expand UBO
 		//dummymesh.transform.rotation.y = lastUpdate*360.0f;
 		geometryShader.UpdateModelMatrix(dummymesh.transform.ModelMatrix()); // todo: replace with SetMatrix4x4
-		dummymesh.Draw();
+		//dummymesh.Draw();
 
 		// Line strips
-		linestripToPlanesShader.Use();
+		linestripToBezierShader.Use();
 		defaultTexture.UseForDrawing();
-
-		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition()); // todo: expand UBO
-		linestripToPlanesShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
-		linestripToPlanesShader.SetUniformFloat("useUniformColor", true);
-		linestripToPlanesShader.SetUniformFloat("transformVerticesInVertexShader", false);
-		linestripToPlanesShader.SetUniformVec4("uniformColor", glm::fvec4{ 0.0f, 1.0f, 0.0f, 1.0f });
-		lineStrips.Draw();
+		linestripToBezierShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
+		bezierStrips.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
