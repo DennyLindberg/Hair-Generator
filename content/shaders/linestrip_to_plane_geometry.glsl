@@ -45,10 +45,10 @@ void main()
     vec3 p3 = p2 + 2.0*bitangent*width;// "top right"
     vec3 p4 = p3 - tangent;            // "top left"
 
-    vec4 t1 = vec4(1.0, 0.0, 0.0, 1.0);
-    vec4 t2 = vec4(1.0, 1.0, 0.0, 1.0);
-    vec4 t3 = vec4(0.0, 1.0, 0.0, 1.0);
-    vec4 t4 = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 t1 = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 t2 = vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 t3 = vec4(1.0, 1.0, 0.0, 1.0);
+    vec4 t4 = vec4(1.0, 0.0, 0.0, 1.0);
     
     // world space
     vec4 p1ws = model * vec4(p1, 1.0);

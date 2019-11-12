@@ -47,8 +47,8 @@ void main()
 
     vec4 totalLightContribution = vec4(ambientLight + diffuseLight + specularLight, 1.0);
 
-    //vec3 texSample = texture(textureSampler, gvTCoord.rg).rgb; // ignore alpha
-    //color = totalLightContribution * vec4(texSample, 1.0f);
+    vec3 texSample = texture(textureSampler, fragment.tcoord.rg).rgb; // ignore alpha
+    color = totalLightContribution * vec4(texSample, 1.0f);
 
-    color = totalLightContribution * vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    //color = totalLightContribution * vec4(0.5f, 0.5f, 0.5f, 1.0f);
 }

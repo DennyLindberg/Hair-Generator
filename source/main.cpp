@@ -44,6 +44,8 @@ namespace fs = std::filesystem;
 int main()
 {
 	fs::path contentFolder = fs::current_path().parent_path() / "content";
+	fs::path textureFolder = fs::current_path().parent_path() / "content" / "textures";
+	fs::path shaderFolder = fs::current_path().parent_path() / "content" / "shaders";
 	fs::path meshFolder = fs::current_path().parent_path() / "content" / "meshes";
 	InitializeApplication(ApplicationSettings{
 		WINDOW_VSYNC, WINDOW_FULLSCREEN, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RATIO, contentFolder
@@ -105,7 +107,7 @@ printf(R"(
 	/*
 		Load and initialize shaders
 	*/
-	GLTexture defaultTexture{contentFolder / "default.png"};
+	GLTexture defaultTexture{textureFolder / "default.png"};
 	defaultTexture.UseForDrawing();
 
 	// Uniform Buffer Object containing matrices
@@ -119,7 +121,7 @@ printf(R"(
 	// Change each LoadShader call to LoadLiveShader for live editing
 	GLProgram lineShader, backgroundShader, geometryShader, linestripToPlanesShader;
 	ShaderManager shaderManager;
-	shaderManager.InitializeFolder(contentFolder);
+	shaderManager.InitializeFolder(shaderFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
@@ -299,6 +301,8 @@ printf(R"(
 
 		// Line strips
 		linestripToPlanesShader.Use();
+		defaultTexture.UseForDrawing();
+
 		geometryShader.SetUniformVec3("cameraPosition", camera.GetPosition()); // todo: expand UBO
 		linestripToPlanesShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
 		linestripToPlanesShader.SetUniformFloat("useUniformColor", true);
