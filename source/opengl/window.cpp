@@ -3,6 +3,21 @@
 #include "glad/glad.h"
 #include <string>
 
+extern "C" {
+	/*
+		Laptops with discrete GPUs tend to auto-select the integrated graphics instead of the
+		discrete GPU. (such as Nvidia or AMD)
+
+		These declarations tell the GPU driver to pick the discrete GPU if available.
+
+		https://gist.github.com/statico/6809850727c708f08458
+		http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+		http://developer.amd.com/community/blog/2015/10/02/amd-enduro-system-for-developers/
+	*/
+	__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;			// Nvidia
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;		// AMD
+}
+
 OpenGLWindow::OpenGLWindow()
 {
 	ApplicationSettings settings = GetApplicationSettings();
