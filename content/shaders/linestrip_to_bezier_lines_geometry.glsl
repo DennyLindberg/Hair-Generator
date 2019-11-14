@@ -131,6 +131,38 @@ void EmitSegment(vec3 start, vec3 end, vec3 normal1, vec3 normal2, vec4 color, f
     EndPrimitive();
 }
 
+void EmitCoordinateFrame(vec3 origin, int cp_index)
+{
+    vec4 red = vec4(1.0f, 0.0f, 0.0f, 1.0f);    
+    vec4 green = vec4(0.0f, 1.0f, 0.0f, 1.0f);    
+    vec4 blue = vec4(0.0f, 0.0f, 1.0f, 1.0f);    
+
+    // Coordinate frame
+    // tangent = "x"
+    vec3 x = controlpoint[cp_index].tangent;
+    vec3 y = controlpoint[cp_index].bitangent * controlpoint[cp_index].width;
+    vec3 z = controlpoint[cp_index].normal * controlpoint[cp_index].width;    // scale down normal to same size as bitangent (otherwise unnecessary size in viewport)
+
+    EmitSegment(
+        origin, origin+x, 
+        z, z, 
+        red, 
+        0.0f, 1.0f
+    );
+    EmitSegment(
+        origin, origin+y, 
+        z, z, 
+        green, 
+        0.0f, 1.0f
+    );
+    EmitSegment(
+        origin, origin+z, 
+        x, x, 
+        blue, 
+        0.0f, 1.0f
+    );
+}
+
 void main()
 {
     vec3 start = gl_in[0].gl_Position.xyz;
@@ -142,8 +174,8 @@ void main()
 
     // 4 points
     vec3 p1 = start;
-    vec3 p2 = start + controlpoint[0].tangent*0.2f;  // TODO: Remove scaling 0.2f and properly generate the tangents instead
-    vec3 p3 = end - controlpoint[1].tangent*0.2f;
+    vec3 p2 = start + controlpoint[0].tangent;
+    vec3 p3 = end - controlpoint[1].tangent;
     vec3 p4 = end;
 
     // Get bezier points
@@ -163,8 +195,13 @@ void main()
     float v1 = dist1 / total_dist;
     float v2 = v1 + dist2 / total_dist;
 
-    // Default values
-    vec4 white = vec4(1.0f);    
+    // TODO: How to draw only the end point when we reach the end of the line strip? 
+    //       Maybe it's okay to draw duplicates for this shader as it only involves lines...
+    EmitCoordinateFrame(start, 0);
+    EmitCoordinateFrame(end, 1);
+
+    // Lines
+    vec4 white = vec4(1.0f);
     EmitSegment(
         start, b1, 
         controlpoint[0].normal, b1normal, 
@@ -186,6 +223,4 @@ void main()
 
     // TODO:
     // Generate more segments
-    // Draw normal, tangent and bitangent coordinate frame
-    // How to draw the End-point coordinate frame without drawing duplicates of all axis'?
 }
