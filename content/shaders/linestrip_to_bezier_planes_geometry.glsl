@@ -114,7 +114,7 @@ void main()
 
     // 4 points
     vec3 p1 = start;
-    vec3 p2 = start + controlpoint[0].tangent*0.2f;
+    vec3 p2 = start + controlpoint[0].tangent*0.2f; // TODO: Remove scaling 0.2f and properly generate the tangents instead
     vec3 p3 = end - controlpoint[1].tangent*0.2f;
     vec3 p4 = end;
 
