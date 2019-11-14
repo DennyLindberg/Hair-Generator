@@ -46,6 +46,11 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
     vec3 bottomright = start - startWidthVector;
     vec3 topright    = end   - endWidthVector;
     vec3 topleft     = end   + endWidthVector;
+
+    // Determine triangle split (some triangles become really thin if this check is not done)
+    vec3 forward = end-start;
+    vec3 opposite_dir = topright-topleft;
+    bool flip_triangle = dot(forward, opposite_dir) > 0;
    
     // world space
     vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
@@ -73,11 +78,11 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
     vertex.color = bottomrightws;
     vertex.tcoord = vec4(0.0f, vBegin, 0.0f, 1.0f);
     EmitVertex();
-    gl_Position = toprightt;
+    gl_Position = flip_triangle? topleftt : toprightt;
     vertex.normal = endNormal;
-    vertex.position = toprightws.xyz;
-    vertex.color = toprightws;
-    vertex.tcoord = vec4(0.0f, vEnd, 0.0f, 1.0f);
+    vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
+    vertex.color = flip_triangle? topleftws : toprightws;
+    vertex.tcoord = flip_triangle? vec4(1.0f, vEnd, 0.0f, 1.0f) : vec4(0.0f, vEnd, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 
@@ -94,11 +99,11 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
     vertex.color = topleftws;
     vertex.tcoord = vec4(1.0f, vEnd, 0.0f, 1.0f);
     EmitVertex();
-    gl_Position = bottomleftt;
+    gl_Position = flip_triangle? bottomrightt : bottomleftt;
     vertex.normal = startNormal;
-    vertex.position = bottomleftws.xyz;
-    vertex.color = bottomleftws;
-    vertex.tcoord = vec4(1.0f, vBegin, 0.0f, 1.0f);
+    vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
+    vertex.color = flip_triangle? bottomrightws : bottomleftws;
+    vertex.tcoord = flip_triangle? vec4(0.0f, vBegin, 0.0f, 1.0f) : vec4(1.0f, vBegin, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 }
