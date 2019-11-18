@@ -16,7 +16,9 @@ layout (std140, binding = 2) uniform Light
     vec4 light_color;     // 16+16
 };
 
-uniform sampler2D textureSampler;
+layout(binding = 0) uniform sampler2D colorSampler;
+layout(binding = 1) uniform sampler2D alphaSampler;
+layout(binding = 2) uniform sampler2D idSampler;
 
 // World space attributes
 in VertexAttrib
@@ -27,8 +29,9 @@ in VertexAttrib
     vec4 tcoord;
 } fragment;
 
-void main() 
+vec4 PhongLight()
 {
+    // Light computation
     vec3 lightDir = normalize(light_position-fragment.position);
     vec3 camDir = normalize(camera_position-fragment.position);
     vec3 normal = normalize(fragment.normal);
@@ -45,6 +48,21 @@ void main()
     // Specular not yet implemented
     vec3 specularLight = vec3(0.0);
 
-    vec4 totalLightContribution = vec4(ambientLight + diffuseLight + specularLight, 1.0);
-    color = totalLightContribution * vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    return vec4(ambientLight + diffuseLight + specularLight, 1.0);
+}
+
+void main()
+{
+    vec2 texCoord = fragment.tcoord.rg;
+
+    // Masked discard
+    vec4 alphaSample = texture(alphaSampler, texCoord);
+    if (alphaSample.r < 0.5f)
+    {
+        discard;
+    }
+
+    vec4 colorSample = texture(colorSampler, texCoord);
+    vec4 idSample = texture(idSampler, texCoord);
+    color = PhongLight() * colorSample;
 }

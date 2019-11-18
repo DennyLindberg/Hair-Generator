@@ -18,6 +18,7 @@ public:
 public:
 	GLTexture(std::filesystem::path imagePath)
 	{
+		glGenTextures(1, &textureId);
 		LoadPNG(imagePath);
 	}
 
@@ -58,7 +59,7 @@ public:
 
 	unsigned int PixelArrayIndex(unsigned int x, unsigned int y);
 
-	void UseForDrawing();
+	void UseForDrawing(unsigned int TextureUnit = 0);
 	void CopyToGPU();
 
 	void Fill(Color& color);

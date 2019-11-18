@@ -37,6 +37,17 @@ struct UniformVec4
 	}
 };
 
+struct UniformMat4
+{
+	GLint id = 0;
+	glm::mat4 value = glm::mat4{ 1.0f };
+
+	void Upload()
+	{
+		glUniformMatrix4fv(id, 1, GL_FALSE, glm::value_ptr(value));
+	}
+};
+
 class GLUBO
 {
 protected:
@@ -77,10 +88,10 @@ protected:
 	GLint fragment_shader_id = 0;
 	GLint geometry_shader_id = -1; // optional
 
-	GLint model_matrix_id = 0;
 	std::map<std::string, UniformFloat> floatUniforms;
 	std::map<std::string, UniformVec3> vec3Uniforms;
 	std::map<std::string, UniformVec4> vec4Uniforms;
+	std::map<std::string, UniformMat4> mat4Uniforms;
 
 public:
 	GLProgram();
@@ -94,9 +105,9 @@ public:
 	void CompileAndLink();
 	void Use();
 	GLuint Id();
-	void UpdateModelMatrix(glm::mat4& model);
 	void SetUniformFloat(std::string name, float value);
 	void SetUniformVec3(std::string name, glm::fvec3 value);
 	void SetUniformVec4(std::string name, glm::fvec4 value);
+	void SetUniformMat4(std::string name, glm::mat4 value);
 	void ReloadUniforms();
 };

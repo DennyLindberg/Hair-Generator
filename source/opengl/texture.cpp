@@ -80,9 +80,10 @@ unsigned int GLTexture::PixelArrayIndex(unsigned int x, unsigned int y)
 	return y * width * 4 + x * 4;
 }
 
-void GLTexture::UseForDrawing()
+
+void GLTexture::UseForDrawing(unsigned int TextureUnit)
 {
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0 + TextureUnit);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 }
 

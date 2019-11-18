@@ -182,12 +182,6 @@ GLuint GLProgram::Id()
 	return programId;
 }
 
-void GLProgram::UpdateModelMatrix(glm::mat4& model)
-{
-	Use();
-	glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, &model[0][0]);
-}
-
 void GLProgram::SetUniformFloat(std::string name, float value)
 {
 	if (floatUniforms.count(name) == 0)
@@ -242,14 +236,27 @@ void GLProgram::SetUniformVec4(std::string name, glm::fvec4 value)
 	}
 }
 
+void GLProgram::SetUniformMat4(std::string name, glm::mat4 value)
+{
+	if (mat4Uniforms.count(name) == 0)
+	{
+		mat4Uniforms[name] = {
+			glGetUniformLocation(programId, name.c_str()),
+			value
+		};
+		mat4Uniforms[name].Upload();
+	}
+	else
+	{
+		auto& u = mat4Uniforms[name];
+		u.value = value;
+		u.Upload();
+	}
+}
+
 void GLProgram::ReloadUniforms()
 {
 	Use();
-
-	model_matrix_id = glGetUniformLocation(programId, "model");
-
-	glm::mat4 identity{ 1.0f };
-	UpdateModelMatrix(identity);
 
 	for (auto& u : floatUniforms)
 	{
@@ -264,6 +271,12 @@ void GLProgram::ReloadUniforms()
 	}
 
 	for (auto& u : vec4Uniforms)
+	{
+		u.second.id = glGetUniformLocation(programId, u.first.c_str());
+		u.second.Upload();
+	}
+
+	for (auto& u : mat4Uniforms)
 	{
 		u.second.id = glGetUniformLocation(programId, u.first.c_str());
 		u.second.Upload();

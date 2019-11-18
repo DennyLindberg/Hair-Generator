@@ -107,11 +107,13 @@ printf(R"(
 	/*
 		Load and initialize shaders
 	*/
-	GLTexture defaultTexture{textureFolder / "default.png"};
+	GLTexture defaultTexture{ textureFolder / "default.png" };
+	GLTexture hair_color{ textureFolder / "sparrow_roots.png" };
+	GLTexture hair_alpha{ textureFolder / "sparrow_alpha.png" };
+	GLTexture hair_id{ textureFolder / "sparrow_id.png" };
 	defaultTexture.UseForDrawing();
 
 	// Uniform Buffer Object containing matrices
-	glm::mat4 identity_transform{ 1.0f };
 	GLUBO CameraUBO, LightUBO;
 	CameraUBO.Bind(1);
 	CameraUBO.Allocate(16 * 8 + 16); // 2 matrices => 8 columns => 16 bytes per column, +vec3 16 bytes
@@ -119,16 +121,27 @@ printf(R"(
 	LightUBO.Allocate(16 * 2);
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram lineShader, backgroundShader, geometryShader, linestripToBezierMeshShader, linestripToBezierLinesShader;
+	GLProgram lineShader, backgroundShader, phongShader, hairShader, bezierLinesShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(shaderFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
-	shaderManager.LoadLiveShader(geometryShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
-	//shaderManager.LoadLiveShader(linestripToBezierMeshShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
-	shaderManager.LoadLiveShader(linestripToBezierMeshShader, L"bezier_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_bezier_planes_geometry.glsl");
-	shaderManager.LoadLiveShader(linestripToBezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"linestrip_to_bezier_lines_geometry.glsl");
+	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
+	//shaderManager.LoadLiveShader(hairShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
+	shaderManager.LoadLiveShader(hairShader, L"bezier_vertex.glsl", L"hair_fragment.glsl", L"linestrip_to_bezier_planes_geometry.glsl");
+	shaderManager.LoadLiveShader(bezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"linestrip_to_bezier_lines_geometry.glsl");
+
+	// Initialize model values
+	glm::mat4 identity_transform{ 1.0f };
+	lineShader.Use();
+	lineShader.SetUniformMat4("model", identity_transform);
+	phongShader.Use(); 
+	phongShader.SetUniformMat4("model", identity_transform);
+	hairShader.Use();
+	hairShader.SetUniformMat4("model", identity_transform);
+	bezierLinesShader.Use();
+	bezierLinesShader.SetUniformMat4("model", identity_transform);
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -157,9 +170,13 @@ printf(R"(
 	/*
 		Load mesh
 	*/
-	GLTriangleMesh dummymesh;
-	GLMesh::LoadOBJ(meshFolder/"lpshead.obj", dummymesh);
-	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", dummymesh);
+	GLTriangleMesh bunnymesh, malemesh, femalemesh;
+	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
+	//GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
+	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
+
+	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
+	femalemesh.transform.scale = glm::vec3(0.0125f);
 
 	/*
 		Coordinate Axis Lines
@@ -286,15 +303,17 @@ printf(R"(
 		CameraUBO.SetData(glm::value_ptr(camera.GetPosition()), 128, 16);
 
 		// Render mesh
-		geometryShader.Use();
-		//dummymesh.transform.rotation.y = lastUpdate*360.0f;
-		geometryShader.UpdateModelMatrix(dummymesh.transform.ModelMatrix()); // todo: replace with SetMatrix4x4
-		//dummymesh.Draw();
+		phongShader.Use();
+		phongShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
+		malemesh.Draw();
+		phongShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
+		femalemesh.Draw();
 
 		// Line strips
-		linestripToBezierMeshShader.Use();
-		defaultTexture.UseForDrawing();
-		linestripToBezierMeshShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
+		hairShader.Use();
+		hair_color.UseForDrawing(0);
+		hair_alpha.UseForDrawing(1);
+		hair_id.UseForDrawing(2);
 		bezierStrips.Draw();
 
 		// Grid
@@ -305,13 +324,11 @@ printf(R"(
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		// Guide lines
-		linestripToBezierLinesShader.Use();
-		linestripToBezierLinesShader.UpdateModelMatrix(identity_transform); // todo: replace with SetMatrix4x4
+		bezierLinesShader.Use();
 		bezierStrips.Draw();
 		
 		// Coordinate axis'
 		lineShader.Use();
-		lineShader.UpdateModelMatrix(identity_transform);
 		lineShader.SetUniformFloat("useUniformColor", false);
 		coordinateReferenceLines.Draw();
 		if (renderTransformHierarchy)
