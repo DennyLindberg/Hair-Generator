@@ -383,7 +383,8 @@ GLBezierStrips::GLBezierStrips()
 	const GLuint bezierPositionAttribId = 0;
 	const GLuint bezierNormalAttribId = 1;
 	const GLuint bezierTangentAttribId = 2;
-	const GLuint bezierWidthAttribId = 3;
+	const GLuint bezierTexcoordAttribId = 3;
+	const GLuint bezierWidthAttribId = 4;
 
 	glBindVertexArray(vao);
 
@@ -391,6 +392,7 @@ GLBezierStrips::GLBezierStrips()
 	glGenBuffers(1, &positionBuffer);
 	glGenBuffers(1, &normalBuffer);
 	glGenBuffers(1, &tangentBuffer);
+	glGenBuffers(1, &texcoordBuffer);
 	glGenBuffers(1, &widthBuffer);
 
 	glGenBuffers(1, &indexBuffer);
@@ -413,6 +415,12 @@ GLBezierStrips::GLBezierStrips()
 	glBindBuffer(GL_ARRAY_BUFFER, tangentBuffer);
 	glVertexAttribPointer(bezierTangentAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
 
+	// Load texcoords
+	valuesPerPosition = 2; // glm::fvec2
+	glEnableVertexAttribArray(bezierTexcoordAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, texcoordBuffer);
+	glVertexAttribPointer(bezierTexcoordAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
+
 	// Load widths
 	valuesPerPosition = 1; // float
 	glEnableVertexAttribArray(bezierWidthAttribId);
@@ -430,6 +438,7 @@ GLBezierStrips::~GLBezierStrips()
 	glDeleteBuffers(1, &positionBuffer);
 	glDeleteBuffers(1, &normalBuffer);
 	glDeleteBuffers(1, &tangentBuffer);
+	glDeleteBuffers(1, &texcoordBuffer);
 	glDeleteBuffers(1, &widthBuffer);
 
 	glDeleteBuffers(1, &indexBuffer);
@@ -439,6 +448,7 @@ void GLBezierStrips::AddBezierStrip(
 	const std::vector<glm::fvec3>& points,
 	const std::vector<glm::fvec3>& normals,
 	const std::vector<glm::fvec3>& tangents,
+	const std::vector<glm::fvec2>& texcoords,
 	const std::vector<float>& widths
 )
 {
@@ -447,7 +457,7 @@ void GLBezierStrips::AddBezierStrip(
 		return; // because there is no data to add
 	}
 
-	if (normals.size() != points.size() || tangents.size() != points.size() || widths.size() != points.size())
+	if (normals.size() != points.size() || tangents.size() != points.size() || texcoords.size() != points.size() || widths.size() != points.size())
 	{
 		return; // because of size mismatch
 	}
@@ -461,6 +471,7 @@ void GLBezierStrips::AddBezierStrip(
 	controlPoints.resize(newVectorSize);
 	controlNormals.resize(newVectorSize);
 	controlTangents.resize(newVectorSize);
+	controlTexcoords.resize(newVectorSize);
 	controlWidths.resize(newVectorSize);
 
 	indices.resize(indices.size() + points.size() + 1); // include restart_index at the end
@@ -469,6 +480,7 @@ void GLBezierStrips::AddBezierStrip(
 		controlPoints[newLineStart + i] = points[i];
 		controlNormals[newLineStart + i] = normals[i];
 		controlTangents[newLineStart + i] = tangents[i];
+		controlTexcoords[newLineStart + i] = texcoords[i];
 		controlWidths[newLineStart + i] = widths[i];
 
 		indices[newIndicesStart + i] = static_cast<unsigned int>(newLineStart + i);
@@ -482,6 +494,7 @@ void GLBezierStrips::Clear()
 	controlPoints.clear();
 	controlNormals.clear();
 	controlTangents.clear();
+	controlTexcoords.clear();
 	controlWidths.clear();
 
 	indices.clear();
@@ -489,6 +502,7 @@ void GLBezierStrips::Clear()
 	controlPoints.shrink_to_fit();
 	controlNormals.shrink_to_fit();
 	controlTangents.shrink_to_fit();
+	controlTexcoords.shrink_to_fit();
 	controlWidths.shrink_to_fit();
 
 	indices.shrink_to_fit();
@@ -511,6 +525,10 @@ void GLBezierStrips::SendToGPU()
 	// Tangents
 	glBindBuffer(GL_ARRAY_BUFFER, tangentBuffer);
 	glBufferVector(GL_ARRAY_BUFFER, controlTangents, GL_STATIC_DRAW);
+
+	// Texcoords
+	glBindBuffer(GL_ARRAY_BUFFER, texcoordBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlTexcoords, GL_STATIC_DRAW);
 
 	// Widths
 	glBindBuffer(GL_ARRAY_BUFFER, widthBuffer);

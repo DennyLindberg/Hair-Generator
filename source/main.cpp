@@ -155,16 +155,18 @@ printf(R"(
 	GLBezierStrips bezierStrips;
 	std::vector<glm::fvec3> bezierStripsPoints1   = {glm::fvec3{0.0f, 0.15f,  0.0f},  glm::fvec3{0.1f, 0.15f, -0.05f}, glm::fvec3{0.2f, 0.15f, -0.4f}};
 	std::vector<glm::fvec3> bezierStripsNormals1  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
-	std::vector<glm::fvec3> bezierStripsTangents1 = { 0.2f*(bezierStripsPoints1[1]-bezierStripsPoints1[0])+glm::fvec3{0.0f, 0.05f,  0.0f}, 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1])+glm::fvec3{0.0f, -0.05f,  0.0f}, 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]) };
+	std::vector<glm::fvec3> bezierStripsTangents1 = { 0.2f * (bezierStripsPoints1[1] - bezierStripsPoints1[0]) + glm::fvec3{0.0f, 0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) + glm::fvec3{0.0f, -0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) };
+	std::vector<glm::fvec2> bezierStripsTexcoord1 = { glm::fvec2{0.0f, 0.0f}, glm::fvec2{0.5f, 0.5f}, glm::fvec2{1.0f, 1.0f} };
 	std::vector<float> bezierStripsWidths1        = { 0.1f, 0.05f, 0.02f };
 
 	std::vector<glm::fvec3> bezierStripsPoints2   = {glm::fvec3{0.0f, 0.3f, -0.0f},  glm::fvec3{0.1f, 0.3f, -0.05f}, glm::fvec3{0.2f, 0.3f, -0.4f}};
 	std::vector<glm::fvec3> bezierStripsNormals2  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
 	std::vector<glm::fvec3> bezierStripsTangents2 = { 0.2f*(bezierStripsPoints1[1]-bezierStripsPoints1[0]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]) };
+	std::vector<glm::fvec2> bezierStripsTexcoord2 = { glm::fvec2{0.0f, 0.0f}, glm::fvec2{0.5f, 0.5f}, glm::fvec2{1.0f, 1.0f} };
 	std::vector<float> bezierStripsWidths2 = { 0.1f/2.0f, 0.05f/2.0f, 0.02f/2.0f };
 
-	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsWidths1);
-	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsWidths2);
+	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsTexcoord1, bezierStripsWidths1);
+	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsTexcoord2, bezierStripsWidths2);
 	bezierStrips.SendToGPU();
 
 	/*
@@ -314,7 +316,7 @@ printf(R"(
 		hair_color.UseForDrawing(0);
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
-		bezierStrips.Draw();
+		//bezierStrips.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

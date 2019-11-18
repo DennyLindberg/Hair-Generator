@@ -16,6 +16,7 @@ in CPAttrib
     vec3 normal;
     vec3 tangent;
     vec3 bitangent;
+    vec2 texcoord;
     float width;
 } controlpoint[];
 
