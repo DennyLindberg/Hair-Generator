@@ -16,7 +16,7 @@ in CPAttrib
     vec3 normal;
     vec3 tangent;
     vec3 bitangent;
-    vec2 texcoord;
+    vec3 texcoord;
     float width;
 } controlpoint[];
 
@@ -41,7 +41,7 @@ vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
     return mix(subsub1, subsub2, t);
 }
 
-void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVector, vec3 startNormal, vec3 endNormal, float vBegin, float vEnd)
+void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVector, vec3 startNormal, vec3 endNormal, float vBegin, float vEnd, float uBegin1, float uBegin2, float uEnd1, float uEnd2)
 {
     vec3 bottomleft  = start + startWidthVector;
     vec3 bottomright = start - startWidthVector;
@@ -71,19 +71,19 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
     vertex.normal = startNormal;
     vertex.position = bottomleftws.xyz;
     vertex.color = bottomleftws;
-    vertex.tcoord = vec4(1.0f, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(uBegin2, vBegin, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = bottomrightt;
     vertex.normal = endNormal;
     vertex.position = bottomrightws.xyz;
     vertex.color = bottomrightws;
-    vertex.tcoord = vec4(0.0f, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(uBegin1, vBegin, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? topleftt : toprightt;
     vertex.normal = endNormal;
     vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
     vertex.color = flip_triangle? topleftws : toprightws;
-    vertex.tcoord = flip_triangle? vec4(1.0f, vEnd, 0.0f, 1.0f) : vec4(0.0f, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(uEnd2, vEnd, 0.0f, 1.0f) : vec4(uEnd1, vEnd, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 
@@ -92,19 +92,19 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
     vertex.normal = endNormal;
     vertex.position = toprightws.xyz;
     vertex.color = toprightws;
-    vertex.tcoord = vec4(0.0f, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(uEnd1, vEnd, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = topleftt;
     vertex.normal = startNormal;
     vertex.position = topleftws.xyz;
     vertex.color = topleftws;
-    vertex.tcoord = vec4(1.0f, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(uEnd2, vEnd, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? bottomrightt : bottomleftt;
     vertex.normal = startNormal;
     vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
     vertex.color = flip_triangle? bottomrightws : bottomleftws;
-    vertex.tcoord = flip_triangle? vec4(0.0f, vBegin, 0.0f, 1.0f) : vec4(1.0f, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(uBegin1, vBegin, 0.0f, 1.0f) : vec4(uBegin2, vBegin, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 }
@@ -115,8 +115,6 @@ void main()
     vec3 end = gl_in[1].gl_Position.xyz;
     vec3 startWidthVector = controlpoint[0].bitangent*controlpoint[0].width;
     vec3 endWidthVector = controlpoint[1].bitangent*controlpoint[1].width;
-    float vBegin = 0.0f;
-    float vEnd = 1.0f;
 
     // 4 points
     vec3 p1 = start;
@@ -144,11 +142,26 @@ void main()
     float v1 = dist1 / total_dist;
     float v2 = v1 + dist2 / total_dist;
 
+    // Get actual uv-coordinates and lerp them
+    float ustart1 = controlpoint[0].texcoord.r;
+    float ustart2 = controlpoint[0].texcoord.b;
+    float uend1 = controlpoint[1].texcoord.r;
+    float uend2 = controlpoint[1].texcoord.b;
     
+    float vstart = controlpoint[0].texcoord.g;
+    float vend = controlpoint[1].texcoord.g;
+    v1 = mix(vstart, vend, v1);
+    v2 = mix(vstart, vend, v2);
+    float u11 = mix(ustart1, uend1, v1);
+    float u12 = mix(ustart2, uend2, v1);
+    float u21 = mix(ustart1, uend1, v2);
+    float u22 = mix(ustart2, uend2, v2);
+
+
     //GenerateQuad(start, end, startWidthVector, endWidthVector, controlpoint[0].normal, controlpoint[1].normal, 0.0f, 1.0f);
 
 
-    GenerateQuad(start, b1, startWidthVector, b1widthvec, controlpoint[0].normal, b1normal, 0.0f, v1);
-    GenerateQuad(b1, b2, b1widthvec, b2widthvec, b1normal, b2normal, v1, v2);
-    GenerateQuad(b2, end, b2widthvec, endWidthVector, b2normal, controlpoint[1].normal, v2, 1.0f);
+    GenerateQuad(start, b1, startWidthVector, b1widthvec, controlpoint[0].normal, b1normal, vstart, v1, ustart1, ustart2, u11, u12);
+    GenerateQuad(b1, b2, b1widthvec, b2widthvec, b1normal, b2normal, v1, v2, u11, u12, u21, u22);
+    GenerateQuad(b2, end, b2widthvec, endWidthVector, b2normal, controlpoint[1].normal, v2, vend, u21, u22, uend1, uend2);
 }

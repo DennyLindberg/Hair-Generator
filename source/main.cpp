@@ -128,7 +128,6 @@ printf(R"(
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
 	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
-	//shaderManager.LoadLiveShader(hairShader, L"line_vertex.glsl", L"phong_fragment.glsl", L"linestrip_to_plane_geometry.glsl");
 	shaderManager.LoadLiveShader(hairShader, L"bezier_vertex.glsl", L"hair_fragment.glsl", L"linestrip_to_bezier_planes_geometry.glsl");
 	shaderManager.LoadLiveShader(bezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"linestrip_to_bezier_lines_geometry.glsl");
 
@@ -151,18 +150,29 @@ printf(R"(
 
 	/*
 		Create line strips for testing
+
+		UV-coordinate regions based on sparrow textures
+		U							V
+		0.0 - 0.2	long/thick		0-1
+		0.2 - 0.35	medium/thick	0-1
+		0.35 - 0.45 thin1			0-1
+		0.47 - 0.6	thin2			0-1
+		0.6 - 0.66	thin3			0.1-1
+
+		0.7-1.0		dense/short		0.7-1
+		0.7-1.0		dense/short		0.1-0.65
 	*/
 	GLBezierStrips bezierStrips;
 	std::vector<glm::fvec3> bezierStripsPoints1   = {glm::fvec3{0.0f, 0.15f,  0.0f},  glm::fvec3{0.1f, 0.15f, -0.05f}, glm::fvec3{0.2f, 0.15f, -0.4f}};
 	std::vector<glm::fvec3> bezierStripsNormals1  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
 	std::vector<glm::fvec3> bezierStripsTangents1 = { 0.2f * (bezierStripsPoints1[1] - bezierStripsPoints1[0]) + glm::fvec3{0.0f, 0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) + glm::fvec3{0.0f, -0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) };
-	std::vector<glm::fvec2> bezierStripsTexcoord1 = { glm::fvec2{0.0f, 0.0f}, glm::fvec2{0.5f, 0.5f}, glm::fvec2{1.0f, 1.0f} };
+	std::vector<glm::fvec3> bezierStripsTexcoord1 = { glm::fvec3{0.01f, 0.01f, 0.2f}, glm::fvec3{0.01f, 0.5f, 0.2f}, glm::fvec3{0.01f, 1.0f, 0.2f} };
 	std::vector<float> bezierStripsWidths1        = { 0.1f, 0.05f, 0.02f };
 
 	std::vector<glm::fvec3> bezierStripsPoints2   = {glm::fvec3{0.0f, 0.3f, -0.0f},  glm::fvec3{0.1f, 0.3f, -0.05f}, glm::fvec3{0.2f, 0.3f, -0.4f}};
 	std::vector<glm::fvec3> bezierStripsNormals2  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
 	std::vector<glm::fvec3> bezierStripsTangents2 = { 0.2f*(bezierStripsPoints1[1]-bezierStripsPoints1[0]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]) };
-	std::vector<glm::fvec2> bezierStripsTexcoord2 = { glm::fvec2{0.0f, 0.0f}, glm::fvec2{0.5f, 0.5f}, glm::fvec2{1.0f, 1.0f} };
+	std::vector<glm::fvec3> bezierStripsTexcoord2 = { glm::fvec3{0.01f, 0.01f, 0.2f}, glm::fvec3{0.01f, 0.5f, 0.2f}, glm::fvec3{0.01f, 1.0f, 0.2f} };
 	std::vector<float> bezierStripsWidths2 = { 0.1f/2.0f, 0.05f/2.0f, 0.02f/2.0f };
 
 	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsTexcoord1, bezierStripsWidths1);
@@ -316,7 +326,7 @@ printf(R"(
 		hair_color.UseForDrawing(0);
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
-		//bezierStrips.Draw();
+		bezierStrips.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

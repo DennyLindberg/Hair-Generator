@@ -147,7 +147,7 @@ protected:
 	std::vector<glm::fvec3> controlPoints; // each curve is separated on the GPU by the RESTART_INDEX in indices
 	std::vector<glm::fvec3> controlNormals;
 	std::vector<glm::fvec3> controlTangents;
-	std::vector<glm::fvec2> controlTexcoords;
+	std::vector<glm::fvec3> controlTexcoords; // {ustart, v, uend}
 	std::vector<float> controlWidths;
 
 	std::vector<unsigned int> indices;
@@ -160,7 +160,7 @@ public:
 		const std::vector<glm::fvec3>& points,
 		const std::vector<glm::fvec3>& normals,
 		const std::vector<glm::fvec3>& tangents,
-		const std::vector<glm::fvec2>& texcoords,
+		const std::vector<glm::fvec3>& texcoords,
 		const std::vector<float>& widths
 	);
 

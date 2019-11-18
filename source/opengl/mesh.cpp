@@ -416,7 +416,7 @@ GLBezierStrips::GLBezierStrips()
 	glVertexAttribPointer(bezierTangentAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
 
 	// Load texcoords
-	valuesPerPosition = 2; // glm::fvec2
+	valuesPerPosition = 3; // glm::fvec3
 	glEnableVertexAttribArray(bezierTexcoordAttribId);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoordBuffer);
 	glVertexAttribPointer(bezierTexcoordAttribId, valuesPerPosition, GL_FLOAT, false, 0, 0);
@@ -448,7 +448,7 @@ void GLBezierStrips::AddBezierStrip(
 	const std::vector<glm::fvec3>& points,
 	const std::vector<glm::fvec3>& normals,
 	const std::vector<glm::fvec3>& tangents,
-	const std::vector<glm::fvec2>& texcoords,
+	const std::vector<glm::fvec3>& texcoords,
 	const std::vector<float>& widths
 )
 {

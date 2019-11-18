@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 vertexPosition;
 layout(location = 1) in vec3 vertexNormal;
 layout(location = 2) in vec3 vertexTangent;
-layout(location = 3) in vec2 vertexTexcoord;
+layout(location = 3) in vec3 vertexTexcoord;
 layout(location = 4) in float vertexWidth;
 
 out CPAttrib
@@ -11,7 +11,7 @@ out CPAttrib
     vec3 normal;
     vec3 tangent;
     vec3 bitangent;
-    vec2 texcoord;
+    vec3 texcoord;
     float width;
 } controlpoint;
 
