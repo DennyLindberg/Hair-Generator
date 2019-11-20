@@ -18,6 +18,7 @@ in CPAttrib
     vec3 bitangent;
     vec3 texcoord;
     float width;
+    // height/curvature
 } controlpoint[];
 
 // World space attributes
@@ -28,6 +29,25 @@ out VertexAttrib
     vec4 color;
     vec4 tcoord;
 } vertex;
+
+// This data is used to define a strip of hair
+struct StripData
+{
+  vec3 start;
+  vec3 end;
+  vec3 startWidthVector;
+  vec3 endWidthVector;
+  vec3 startCurvatureHeight;
+  vec3 endCurvatureHeight;
+  vec3 startNormal;
+  vec3 endNormal;
+  float vBegin;
+  float vEnd;
+  float uBegin1;
+  float uBegin2;
+  float uEnd1;
+  float uEnd2;
+};
 
 vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
 {
@@ -41,15 +61,15 @@ vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
     return mix(subsub1, subsub2, t);
 }
 
-void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVector, vec3 startNormal, vec3 endNormal, float vBegin, float vEnd, float uBegin1, float uBegin2, float uEnd1, float uEnd2)
+void GenerateQuad(StripData data)
 {
-    vec3 bottomleft  = start + startWidthVector;
-    vec3 bottomright = start - startWidthVector;
-    vec3 topright    = end   - endWidthVector;
-    vec3 topleft     = end   + endWidthVector;
+    vec3 bottomleft  = data.start + data.startWidthVector;
+    vec3 bottomright = data.start - data.startWidthVector;
+    vec3 topright    = data.end   - data.endWidthVector;
+    vec3 topleft     = data.end   + data.endWidthVector;
 
     // Determine triangle split (some triangles become really thin if this check is not done)
-    vec3 forward = end-start;
+    vec3 forward = data.end-data.start;
     vec3 opposite_dir = topright-topleft;
     bool flip_triangle = dot(forward, opposite_dir) > 0;
    
@@ -68,43 +88,111 @@ void GenerateQuad(vec3 start, vec3 end, vec3 startWidthVector, vec3 endWidthVect
 
     // Triangle 1
     gl_Position = bottomleftt;
-    vertex.normal = startNormal;
+    vertex.normal = data.startNormal;
     vertex.position = bottomleftws.xyz;
     vertex.color = bottomleftws;
-    vertex.tcoord = vec4(uBegin2, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = bottomrightt;
-    vertex.normal = endNormal;
+    vertex.normal = data.endNormal;
     vertex.position = bottomrightws.xyz;
     vertex.color = bottomrightws;
-    vertex.tcoord = vec4(uBegin1, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? topleftt : toprightt;
-    vertex.normal = endNormal;
+    vertex.normal = data.endNormal;
     vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
     vertex.color = flip_triangle? topleftws : toprightws;
-    vertex.tcoord = flip_triangle? vec4(uEnd2, vEnd, 0.0f, 1.0f) : vec4(uEnd1, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f) : vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 
     // Triangle 2
     gl_Position = toprightt;
-    vertex.normal = endNormal;
+    vertex.normal = data.endNormal;
     vertex.position = toprightws.xyz;
     vertex.color = toprightws;
-    vertex.tcoord = vec4(uEnd1, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = topleftt;
-    vertex.normal = startNormal;
+    vertex.normal = data.startNormal;
     vertex.position = topleftws.xyz;
     vertex.color = topleftws;
-    vertex.tcoord = vec4(uEnd2, vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? bottomrightt : bottomleftt;
-    vertex.normal = startNormal;
+    vertex.normal = data.startNormal;
     vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
     vertex.color = flip_triangle? bottomrightws : bottomleftws;
-    vertex.tcoord = flip_triangle? vec4(uBegin1, vBegin, 0.0f, 1.0f) : vec4(uBegin2, vBegin, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f) : vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
+    EmitVertex();
+    EndPrimitive();
+}
+
+void GenerateDoubleQuad(StripData data)
+{
+    vec3 bottomleft  = data.start + data.startWidthVector;
+    vec3 bottomright = data.start - data.startWidthVector;
+    vec3 topright    = data.end   - data.endWidthVector;
+    vec3 topleft     = data.end   + data.endWidthVector;
+
+    // Determine triangle split (some triangles become really thin if this check is not done)
+    vec3 forward = data.end-data.start;
+    vec3 opposite_dir = topright-topleft;
+    bool flip_triangle = dot(forward, opposite_dir) > 0;
+   
+    // world space
+    vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
+    vec4 bottomrightws = model * vec4(bottomright, 1.0f);
+    vec4 toprightws = model * vec4(topright, 1.0f);
+    vec4 topleftws = model * vec4(topleft, 1.0f);
+
+    // clip space
+    mat4 vp = projection * view;
+    vec4 bottomleftt = vp * bottomleftws;
+    vec4 bottomrightt = vp * bottomrightws;
+    vec4 toprightt = vp * toprightws;
+    vec4 topleftt = vp * topleftws;
+
+    // Triangle 1
+    gl_Position = bottomleftt;
+    vertex.normal = data.startNormal;
+    vertex.position = bottomleftws.xyz;
+    vertex.color = bottomleftws;
+    vertex.tcoord = vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
+    EmitVertex();
+    gl_Position = bottomrightt;
+    vertex.normal = data.endNormal;
+    vertex.position = bottomrightws.xyz;
+    vertex.color = bottomrightws;
+    vertex.tcoord = vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f);
+    EmitVertex();
+    gl_Position = flip_triangle? topleftt : toprightt;
+    vertex.normal = data.endNormal;
+    vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
+    vertex.color = flip_triangle? topleftws : toprightws;
+    vertex.tcoord = flip_triangle? vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f) : vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
+    EmitVertex();
+    EndPrimitive();
+
+    // Triangle 2
+    gl_Position = toprightt;
+    vertex.normal = data.endNormal;
+    vertex.position = toprightws.xyz;
+    vertex.color = toprightws;
+    vertex.tcoord = vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
+    EmitVertex();
+    gl_Position = topleftt;
+    vertex.normal = data.startNormal;
+    vertex.position = topleftws.xyz;
+    vertex.color = topleftws;
+    vertex.tcoord = vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f);
+    EmitVertex();
+    gl_Position = flip_triangle? bottomrightt : bottomleftt;
+    vertex.normal = data.startNormal;
+    vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
+    vertex.color = flip_triangle? bottomrightws : bottomleftws;
+    vertex.tcoord = flip_triangle? vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f) : vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 }
@@ -157,11 +245,52 @@ void main()
     float u21 = mix(ustart1, uend1, v2);
     float u22 = mix(ustart2, uend2, v2);
 
-
-    //GenerateQuad(start, end, startWidthVector, endWidthVector, controlpoint[0].normal, controlpoint[1].normal, 0.0f, 1.0f);
-
-
-    GenerateQuad(start, b1, startWidthVector, b1widthvec, controlpoint[0].normal, b1normal, vstart, v1, ustart1, ustart2, u11, u12);
-    GenerateQuad(b1, b2, b1widthvec, b2widthvec, b1normal, b2normal, v1, v2, u11, u12, u21, u22);
-    GenerateQuad(b2, end, b2widthvec, endWidthVector, b2normal, controlpoint[1].normal, v2, vend, u21, u22, uend1, uend2);
+    GenerateQuad(StripData(
+        start,
+        b1,
+        startWidthVector,
+        b1widthvec,
+        startWidthVector, // wrong
+        b1widthvec, // wrong
+        controlpoint[0].normal,
+        b1normal,
+        vstart,
+        v1,
+        ustart1,
+        ustart2,
+        u11,
+        u12
+    ));
+    GenerateQuad(StripData(
+        b1,
+        b2,
+        b1widthvec,
+        b2widthvec,
+        startWidthVector, // wrong
+        b1widthvec, // wrong
+        b1normal,
+        b2normal,
+        v1,
+        v2,
+        u11,
+        u12,
+        u21,
+        u22
+    ));
+    GenerateQuad(StripData(        
+        b2,
+        end,
+        b2widthvec,
+        endWidthVector,
+        startWidthVector, // wrong
+        b1widthvec, // wrong
+        b2normal,
+        controlpoint[1].normal,
+        v2,
+        vend,
+        u21,
+        u22,
+        uend1,
+        uend2
+    ));
 }
