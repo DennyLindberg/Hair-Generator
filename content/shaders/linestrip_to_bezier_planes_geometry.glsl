@@ -32,7 +32,7 @@ out VertexAttrib
 } vertex;
 
 // This data is used to define a strip of hair
-struct StripData
+struct SegmentData
 {
   vec3 start;
   vec3 end;
@@ -58,7 +58,7 @@ vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
     return mix(subsub1, subsub2, t);
 }
 
-void GenerateQuad(StripData data)
+void GenerateQuad(SegmentData data)
 {
     vec3 bottomleft  = data.start + data.startWidthVector;
     vec3 bottomright = data.start - data.startWidthVector;
@@ -134,99 +134,45 @@ void main()
     vec3 endWidthVector = controlpoint[1].bitangent*controlpoint[1].width;
 
     // Bezier control points
-    vec3 p1 = start;
-    vec3 p2 = start + controlpoint[0].tangent;
-    vec3 p3 = end - controlpoint[1].tangent;
-    vec3 p4 = end;
+    vec3 bcp1 = start;
+    vec3 bcp2 = start + controlpoint[0].tangent;
+    vec3 bcp3 = end - controlpoint[1].tangent;
+    vec3 bcp4 = end;
 
-    // float timestep = 1.0f/vdivisions;
-    // float t = 0.0f;
-    // StripData data;
-    // data.start = start;
-    // data.startWidthVector = startWidthVector;
-    // //data.startCurvatureHeight
-    // data.startNormal = controlpoint[0].normal;
-    // data.start
-    // for (int i=0; i<vdivisions-1; i++)
-    // {
-    //     data.end = bezier(b1, b2, b3, b4, t);
+    float timestep = 1.0f/vdivisions;
+    float t = timestep;
+    SegmentData segment;
+    segment.start = start;
+    segment.startWidthVector = startWidthVector;
+    //segment.startCurvatureHeight
+    segment.startNormal = controlpoint[0].normal;
+    segment.startTexcoord = controlpoint[0].texcoord;
+    for (int i=1; i<vdivisions; i++)
+    {
+        // Endpoints
+        t = i*timestep;
+        segment.end = bezier(bcp1, bcp2, bcp3, bcp4, t);
+        segment.endWidthVector = mix(startWidthVector, endWidthVector, t);
+        //segment.endCurvatureHeight
+        segment.endNormal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t));
+        segment.endTexcoord = mix(controlpoint[0].texcoord, controlpoint[1].texcoord, t);
 
-    //     // update for next iteration
-    //     data.start = data.end;
-    //     t += timestep;
-    // }
-    // // TODO: End case
-    // data.end = end;
+        // Generate
+        GenerateQuad(segment);
 
-    // Get bezier points
-    float t1 = 0.33f;
-    float t2 = 0.66f;
-    vec3 b1 = bezier(p1, p2, p3, p4, t1);
-    vec3 b2 = bezier(p1, p2, p3, p4, t2);
+        // Update startpoints for next iteration
+        segment.start = segment.end;
+        segment.startWidthVector = segment.endWidthVector;
+        segment.startCurvatureHeight = segment.endCurvatureHeight;
+        segment.startNormal = segment.endNormal;
+        segment.startTexcoord = segment.endTexcoord;
+    }
 
-    vec3 b1normal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t1));
-    vec3 b1widthvec = mix(startWidthVector, endWidthVector, t1);
-
-    vec3 b2normal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t2));
-    vec3 b2widthvec = mix(startWidthVector, endWidthVector, t2);
-
-    // Compute v-coord based on distances to avoid uneven stretching between divisions
-    float dist1 = distance(start, b1);
-    float dist2 = distance(b1, b2);
-    float dist3 = distance(b2, end);
-    float total_dist = dist1 + dist2 + dist3;
-    float v1 = dist1 / total_dist;
-    float v2 = v1 + dist2 / total_dist;
-
-    // Get actual uv-coordinates and lerp them
-    float ustart1 = controlpoint[0].texcoord.r;
-    float ustart2 = controlpoint[0].texcoord.b;
-    float uend1 = controlpoint[1].texcoord.r;
-    float uend2 = controlpoint[1].texcoord.b;
-    
-    float vstart = controlpoint[0].texcoord.g;
-    float vend = controlpoint[1].texcoord.g;
-    v1 = mix(vstart, vend, v1);
-    v2 = mix(vstart, vend, v2);
-    float u11 = mix(ustart1, uend1, v1);
-    float u12 = mix(ustart2, uend2, v1);
-    float u21 = mix(ustart1, uend1, v2);
-    float u22 = mix(ustart2, uend2, v2);
-
-    GenerateQuad(StripData(
-        start,
-        b1,
-        startWidthVector,
-        b1widthvec,
-        startWidthVector, // wrong
-        b1widthvec, // wrong
-        controlpoint[0].normal,
-        b1normal,
-        vec3(ustart1, vstart, ustart2),
-        vec3(u11, v1, u12)
-    ));
-    GenerateQuad(StripData(
-        b1,
-        b2,
-        b1widthvec,
-        b2widthvec,
-        startWidthVector, // wrong
-        b1widthvec, // wrong
-        b1normal,
-        b2normal,
-        vec3(u11, v1, u12),
-        vec3(u21, v2, u22)
-    ));
-    GenerateQuad(StripData(        
-        b2,
-        end,
-        b2widthvec,
-        endWidthVector,
-        startWidthVector, // wrong
-        b1widthvec, // wrong
-        b2normal,
-        controlpoint[1].normal,
-        vec3(u21, v2, u22),
-        vec3(uend1, vend, uend2)
-    ));
+    // Generate last segment
+    segment.end = end;
+    segment.endWidthVector = endWidthVector;
+    //segment.endCurvatureHeight
+    segment.endNormal = controlpoint[1].normal;
+    segment.endTexcoord = controlpoint[1].texcoord;
+    GenerateQuad(segment);
 }
