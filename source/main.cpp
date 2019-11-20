@@ -170,6 +170,7 @@ printf(R"(
 	std::vector<float> bezierStripsWidths1        = { 0.1f, 0.05f, 0.02f };
 	std::vector<float> bezierStripsThickness1     = { 0.1f, 0.05f, 0.01f };
 	std::vector<int> bezierStripsSegmentShape1    = { 2, 2, 2 };
+	std::vector<int> bezierStripsSegmentSubdivs1  = { 4, 1, 0 }; // last element is pointless
 
 	std::vector<glm::fvec3> bezierStripsPoints2   = {glm::fvec3{0.0f, 0.3f, -0.0f},  glm::fvec3{0.1f, 0.3f, -0.05f}, glm::fvec3{0.2f, 0.3f, -0.4f}};
 	std::vector<glm::fvec3> bezierStripsNormals2  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
@@ -178,9 +179,10 @@ printf(R"(
 	std::vector<float> bezierStripsWidths2		  = { 0.1f/2.0f, 0.05f/2.0f, 0.02f/2.0f };
 	std::vector<float> bezierStripsThickness2	  = { 0.01f, 0.05f, 0.1f };
 	std::vector<int> bezierStripsSegmentShape2    = { 1, 1, 1 };
+	std::vector<int> bezierStripsSegmentSubdivs2  = { 1, 4, 0 }; // last element is pointless
 
-	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsTexcoord1, bezierStripsWidths1, bezierStripsThickness1, bezierStripsSegmentShape1);
-	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsTexcoord2, bezierStripsWidths2, bezierStripsThickness2, bezierStripsSegmentShape2);
+	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsTexcoord1, bezierStripsWidths1, bezierStripsThickness1, bezierStripsSegmentShape1, bezierStripsSegmentSubdivs1);
+	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsTexcoord2, bezierStripsWidths2, bezierStripsThickness2, bezierStripsSegmentShape2, bezierStripsSegmentSubdivs2);
 	bezierStrips.SendToGPU();
 
 	/*

@@ -63,7 +63,7 @@ void ListenToFileChange(std::atomic_bool* stopThread, std::filesystem::path fold
 				{
 					(*fileCallbacks)[i].lastModifiedTimestamp = GetThreadedTime();
 					(*fileModifiedStates)[i] = true;
-					break;
+					// don't break, we can have multiple listeners on the same file
 				}
 			}
 

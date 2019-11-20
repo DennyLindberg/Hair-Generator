@@ -387,6 +387,7 @@ GLBezierStrips::GLBezierStrips()
 	const GLuint bezierWidthAttribId = 4;
 	const GLuint bezierThicknessAttribId = 5;
 	const GLuint bezierShapeAttribId = 6;
+	const GLuint bezierSubdivAttribId = 7;
 
 	glBindVertexArray(vao);
 
@@ -398,6 +399,7 @@ GLBezierStrips::GLBezierStrips()
 	glGenBuffers(1, &widthBuffer);
 	glGenBuffers(1, &thicknessBuffer);
 	glGenBuffers(1, &shapeBuffer);
+	glGenBuffers(1, &subdivisionsBuffer);
 
 	glGenBuffers(1, &indexBuffer);
 
@@ -443,6 +445,12 @@ GLBezierStrips::GLBezierStrips()
 	glBindBuffer(GL_ARRAY_BUFFER, shapeBuffer);
 	glVertexAttribIPointer(bezierShapeAttribId, valuesPerPosition, GL_INT, 0, 0);
 
+	// Define segment subdivisions
+	valuesPerPosition = 1; // int
+	glEnableVertexAttribArray(bezierSubdivAttribId);
+	glBindBuffer(GL_ARRAY_BUFFER, subdivisionsBuffer);
+	glVertexAttribIPointer(bezierSubdivAttribId, valuesPerPosition, GL_INT, 0, 0);
+
 	// Index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
 
@@ -458,6 +466,7 @@ GLBezierStrips::~GLBezierStrips()
 	glDeleteBuffers(1, &widthBuffer);
 	glDeleteBuffers(1, &thicknessBuffer);
 	glDeleteBuffers(1, &shapeBuffer);
+	glDeleteBuffers(1, &subdivisionsBuffer);
 
 	glDeleteBuffers(1, &indexBuffer);
 }
@@ -469,7 +478,8 @@ void GLBezierStrips::AddBezierStrip(
 	const std::vector<glm::fvec3>& texcoords,
 	const std::vector<float>& widths,
 	const std::vector<float>& thickness,
-	const std::vector<int>& shapes
+	const std::vector<int>& shapes,
+	const std::vector<int>& subdivisions
 )
 {
 	if (points.size() == 0)
@@ -482,7 +492,8 @@ void GLBezierStrips::AddBezierStrip(
 		texcoords.size() != points.size() || 
 		widths.size() != points.size() ||
 		thickness.size() != points.size() ||
-		shapes.size() != points.size())
+		shapes.size() != points.size() ||
+		subdivisions.size() != points.size())
 	{
 		return; // because of size mismatch
 	}
@@ -500,6 +511,7 @@ void GLBezierStrips::AddBezierStrip(
 	controlWidths.resize(newVectorSize);
 	controlThickness.resize(newVectorSize);
 	controlShapes.resize(newVectorSize);
+	controlSubdivisions.resize(newVectorSize);
 
 	indices.resize(indices.size() + points.size() + 1); // include restart_index at the end
 	for (size_t i = 0; i < points.size(); ++i)
@@ -511,6 +523,7 @@ void GLBezierStrips::AddBezierStrip(
 		controlWidths[newLineStart + i] = widths[i];
 		controlThickness[newLineStart + i] = thickness[i];
 		controlShapes[newLineStart + i] = shapes[i];
+		controlSubdivisions[newLineStart + i] = subdivisions[i];
 
 		indices[newIndicesStart + i] = static_cast<unsigned int>(newLineStart + i);
 	}
@@ -527,6 +540,7 @@ void GLBezierStrips::Clear()
 	controlWidths.clear();
 	controlThickness.clear();
 	controlShapes.clear();
+	controlSubdivisions.clear();
 
 	indices.clear();
 
@@ -537,6 +551,7 @@ void GLBezierStrips::Clear()
 	controlWidths.shrink_to_fit();
 	controlThickness.shrink_to_fit();
 	controlShapes.shrink_to_fit();
+	controlSubdivisions.shrink_to_fit();
 
 	indices.shrink_to_fit();
 
@@ -574,6 +589,10 @@ void GLBezierStrips::SendToGPU()
 	// Shapes
 	glBindBuffer(GL_ARRAY_BUFFER, shapeBuffer);
 	glBufferVector(GL_ARRAY_BUFFER, controlShapes, GL_STATIC_DRAW);
+
+	// Subdivisions
+	glBindBuffer(GL_ARRAY_BUFFER, subdivisionsBuffer);
+	glBufferVector(GL_ARRAY_BUFFER, controlSubdivisions, GL_STATIC_DRAW);
 
 	// Indices
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);

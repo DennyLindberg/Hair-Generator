@@ -7,6 +7,7 @@ layout(location = 3) in vec3 vertexTexcoord;
 layout(location = 4) in float vertexWidth;
 layout(location = 5) in float vertexThickness;
 layout(location = 6) in int vertexSegmentShape;
+layout(location = 7) in int vertexSegmentSubdivisions;
 
 out CPAttrib
 {
@@ -17,6 +18,7 @@ out CPAttrib
     float width;
     float thickness;
     int shape;
+    int subdivisions;
 } controlpoint;
 
 void main()
@@ -29,4 +31,5 @@ void main()
     controlpoint.width = vertexWidth;
     controlpoint.thickness = vertexThickness;
     controlpoint.shape = vertexSegmentShape;
+    controlpoint.subdivisions = vertexSegmentSubdivisions;
 }

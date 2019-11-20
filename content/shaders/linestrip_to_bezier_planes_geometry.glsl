@@ -1,8 +1,7 @@
 #version 420 core
 
 layout(lines) in;
-layout(triangle_strip, max_vertices = 54) out;
-const int vdivisions = 3;
+layout(triangle_strip, max_vertices = 72) out; // max segments 4 (subdivisions) as each segment has 6 to 18 vertices. Hardware can only emit 73 vertices in total
 
 layout (std140, binding = 1) uniform Camera
 {
@@ -21,6 +20,7 @@ in CPAttrib
     float width;
     float thickness;
     int shape;
+    int subdivisions; // max 4
 } controlpoint[];
 
 // World space attributes
@@ -302,26 +302,30 @@ void main()
     segment.startCurvatureHeight = controlpoint[0].thickness;
     segment.startNormal = controlpoint[0].normal;
     segment.startTexcoord = controlpoint[0].texcoord;
-    float timestep = 1.0f/vdivisions;
-    for (int i=1; i<vdivisions; i++)
+
+    if (controlpoint[0].subdivisions > 0)
     {
-        // Endpoints
-        float t = i*timestep;
-        segment.end = bezier(bcp1, bcp2, bcp3, bcp4, t);
-        segment.endWidthVector = mix(startWidthVector, endWidthVector, t);
-        segment.endCurvatureHeight = mix(controlpoint[0].thickness, controlpoint[1].thickness, t);
-        segment.endNormal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t));
-        segment.endTexcoord = mix(controlpoint[0].texcoord, controlpoint[1].texcoord, t);
+        float timestep = 1.0f/controlpoint[0].subdivisions;
+        for (int i=1; i<controlpoint[0].subdivisions; i++)
+        {
+            // Endpoints
+            float t = i*timestep;
+            segment.end = bezier(bcp1, bcp2, bcp3, bcp4, t);
+            segment.endWidthVector = mix(startWidthVector, endWidthVector, t);
+            segment.endCurvatureHeight = mix(controlpoint[0].thickness, controlpoint[1].thickness, t);
+            segment.endNormal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t));
+            segment.endTexcoord = mix(controlpoint[0].texcoord, controlpoint[1].texcoord, t);
 
-        // Generate
-        GenerateSegment(segment);
+            // Generate
+            GenerateSegment(segment);
 
-        // Update startpoints for next iteration
-        segment.start = segment.end;
-        segment.startWidthVector = segment.endWidthVector;
-        segment.startCurvatureHeight = segment.endCurvatureHeight;
-        segment.startNormal = segment.endNormal;
-        segment.startTexcoord = segment.endTexcoord;
+            // Update startpoints for next iteration
+            segment.start = segment.end;
+            segment.startWidthVector = segment.endWidthVector;
+            segment.startCurvatureHeight = segment.endCurvatureHeight;
+            segment.startNormal = segment.endNormal;
+            segment.startTexcoord = segment.endTexcoord;
+        }
     }
 
     // Generate last segment

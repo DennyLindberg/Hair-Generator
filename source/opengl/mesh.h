@@ -142,6 +142,7 @@ protected:
 	GLuint widthBuffer = 0;
 	GLuint thicknessBuffer = 0;
 	GLuint shapeBuffer = 0;
+	GLuint subdivisionsBuffer = 0;
 
 	GLuint indexBuffer = 0;
 
@@ -153,6 +154,7 @@ protected:
 	std::vector<float> controlWidths;
 	std::vector<float> controlThickness;
 	std::vector<int>   controlShapes;
+	std::vector<int>   controlSubdivisions;
 
 	std::vector<unsigned int> indices;
 
@@ -167,7 +169,8 @@ public:
 		const std::vector<glm::fvec3>& texcoords,
 		const std::vector<float>& widths,
 		const std::vector<float>& thickness,
-		const std::vector<int>& shapes
+		const std::vector<int>& shapes,
+		const std::vector<int>& subdivisions
 	);
 
 	void Clear();

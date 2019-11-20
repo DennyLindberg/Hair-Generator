@@ -1,7 +1,7 @@
 #version 420 core
 
 layout(lines) in;
-layout(line_strip, max_vertices = 18) out; // 6*2 for start/end coordinate axis (x2, start/end) + 2n segments
+layout(line_strip, max_vertices = 20) out; // 6*2 for start/end coordinate axis (x2, start/end) + 2n segments (max 4 subdivisions)
 
 layout (std140, binding = 1) uniform Camera
 {
@@ -20,6 +20,7 @@ in CPAttrib
     float width;
     float thickness;
     int shape;
+    int subdivisions; // max 4
 } controlpoint[];
 
 // World space attributes
@@ -89,29 +90,33 @@ void main()
     vec3 start = gl_in[0].gl_Position.xyz;
     vec3 end = gl_in[1].gl_Position.xyz;
 
-    // 4 points
-    vec3 p1 = start;
-    vec3 p2 = start + controlpoint[0].tangent;
-    vec3 p3 = end - controlpoint[1].tangent;
-    vec3 p4 = end;
-
-    // Get bezier points
-    float t1 = 0.33f;
-    float t2 = 0.66f;
-    vec3 b1 = bezier(p1, p2, p3, p4, t1);
-    vec3 b2 = bezier(p1, p2, p3, p4, t2);
+    // Bezier control points
+    vec3 bcp1 = start;
+    vec3 bcp2 = start + controlpoint[0].tangent;
+    vec3 bcp3 = end - controlpoint[1].tangent;
+    vec3 bcp4 = end;
 
     // TODO: How to draw only the end point when we reach the end of the line strip? 
     //       Maybe it's okay to draw duplicates for this shader as it only involves lines...
-    EmitCoordinateFrame(start, 0);
-    EmitCoordinateFrame(end, 1);
+    EmitCoordinateFrame(start, 0); // 6 points
+    EmitCoordinateFrame(end, 1);   // 6 points
 
-    // Lines
+    // 2 points * subdivisions
     vec4 white = vec4(1.0f);
-    EmitSegment(start, b1, white);
-    EmitSegment(b1, b2, white);
-    EmitSegment(b2, end, white);
+    vec3 a = start;
+    vec3 b;
+    if (controlpoint[0].subdivisions > 0)
+    {
+        float timestep = 1.0f/controlpoint[0].subdivisions;
+        for (int i=1; i<controlpoint[0].subdivisions; i++)
+        {
+            float t = i*timestep;
+            b = bezier(bcp1, bcp2, bcp3, bcp4, t);
+            EmitSegment(a, b, white);
 
-    // TODO:
-    // Generate more segments
+            a = b;
+        }
+    }
+    b = end;
+    EmitSegment(a, b, white);
 }
