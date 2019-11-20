@@ -1,7 +1,7 @@
 #version 420 core
 
 layout(lines) in;
-layout(triangle_strip, max_vertices = 36) out;
+layout(triangle_strip, max_vertices = 54) out;
 const int vdivisions = 3;
 const float tempheight = 0.01f;
 
@@ -183,7 +183,7 @@ void GenerateDoubleQuad(SegmentData data)
     texcoordmid1.r = (texcoordmid1.r + texcoordmid1.b)/2.0f;
     texcoordmid2.r = (texcoordmid2.r + texcoordmid2.b)/2.0f;
 
-    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topright, topleft);
+    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddle, topleft);
     EmitQuad(bottomleftt, bottommiddlet, topmiddlet, topleftt, bottomleftws, bottommiddlews, topmiddlews, topleftws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
 
     // texcoord
@@ -191,7 +191,84 @@ void GenerateDoubleQuad(SegmentData data)
     texcoordmid2 = data.endTexcoord;
     texcoordmid1.b = (texcoordmid1.r + texcoordmid1.b)/2.0f;
     texcoordmid2.b = (texcoordmid2.r + texcoordmid2.b)/2.0f;
+    bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topright, topmiddle);
     EmitQuad(bottommiddlet, bottomrightt, toprightt, topmiddlet, bottommiddlews, bottomrightws, toprightws, topmiddlews, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
+}
+
+void GenerateTrippleQuad(SegmentData data)
+{
+    // base quad
+    vec3 bottomleft  = data.start + data.startWidthVector;
+    vec3 bottomright = data.start - data.startWidthVector;
+    vec3 topright    = data.end   - data.endWidthVector;
+    vec3 topleft     = data.end   + data.endWidthVector;
+
+    // middle split
+    vec3 bottommiddle = (bottomleft+bottomright)/2.0f;
+    vec3 topmiddle = (topleft+topright)/2.0f;
+    vec3 bottommiddlel = (bottommiddle + bottomleft)/2.0f;
+    vec3 bottommiddler = (bottommiddle + bottomright)/2.0f;
+    vec3 topmiddlel = (topmiddle + topleft)/2.0f;
+    vec3 topmiddler = (topmiddle + topright)/2.0f;
+
+    // apply height offset
+    vec3 heightdirection1 = data.startNormal * tempheight/2.0f;
+    vec3 heightdirection2 = data.endNormal * tempheight/2.0f;
+    bottomleft -= heightdirection1;
+    bottommiddlel += heightdirection1;
+    bottommiddler += heightdirection1;
+    bottomright -= heightdirection1;
+    topleft -= heightdirection2;
+    topmiddlel += heightdirection2;
+    topmiddler += heightdirection2;
+    topright -= heightdirection2;
+
+    // world space
+    vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
+    vec4 bottommiddlelws = model * vec4(bottommiddlel, 1.0f);
+    vec4 bottommiddlerws = model * vec4(bottommiddler, 1.0f);
+    vec4 bottomrightws = model * vec4(bottomright, 1.0f);
+
+    vec4 topleftws = model * vec4(topleft, 1.0f);
+    vec4 topmiddlelws = model * vec4(topmiddlel, 1.0f);
+    vec4 topmiddlerws = model * vec4(topmiddler, 1.0f);
+    vec4 toprightws = model * vec4(topright, 1.0f);
+
+    // clip space
+    mat4 vp = projection * view;
+    vec4 bottomleftt = vp * bottomleftws;
+    vec4 bottommiddlelt = vp * bottommiddlelws;
+    vec4 bottommiddlert = vp * bottommiddlerws;
+    vec4 bottomrightt = vp * bottomrightws;
+
+    vec4 topleftt = vp * topleftws;
+    vec4 topmiddlelt = vp * topmiddlelws;
+    vec4 topmiddlert = vp * topmiddlerws;
+    vec4 toprightt = vp * toprightws;
+
+    // Quad 1
+    vec3 texcoordmid1 = data.startTexcoord;
+    vec3 texcoordmid2 = data.endTexcoord;
+    texcoordmid1.r = mix(texcoordmid1.b, texcoordmid1.r, 0.25f);
+    texcoordmid2.r = mix(texcoordmid2.b, texcoordmid2.r, 0.25f);
+    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
+    EmitQuad(bottomleftt, bottommiddlelt, topmiddlelt, topleftt, bottomleftws, bottommiddlelws, topmiddlelws, topleftws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
+
+    // Quad 2
+    texcoordmid1.b = texcoordmid1.r;
+    texcoordmid2.b = texcoordmid2.r;
+    texcoordmid1.r = mix(data.startTexcoord.b, data.startTexcoord.r, 0.75f);
+    texcoordmid2.r = mix(data.endTexcoord.b, data.endTexcoord.r, 0.75f);
+    bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
+    EmitQuad(bottommiddlelt, bottommiddlert, topmiddlert, topmiddlelt, bottommiddlelws, bottommiddlerws, topmiddlerws, topmiddlelws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
+
+    // Quad 3
+    texcoordmid1.b = texcoordmid1.r;
+    texcoordmid2.b = texcoordmid2.r;
+    texcoordmid1.r = data.startTexcoord.r;
+    texcoordmid2.r = data.endTexcoord.r;
+    bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
+    EmitQuad(bottommiddlert, bottomrightt, toprightt, topmiddlert, bottommiddlerws, bottomrightws, toprightws, topmiddlerws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
 }
 
 void main()
@@ -207,18 +284,17 @@ void main()
     vec3 bcp3 = end - controlpoint[1].tangent;
     vec3 bcp4 = end;
 
-    float timestep = 1.0f/vdivisions;
-    float t = timestep;
     SegmentData segment;
     segment.start = start;
     segment.startWidthVector = startWidthVector;
     segment.startCurvatureHeight = tempheight;
     segment.startNormal = controlpoint[0].normal;
     segment.startTexcoord = controlpoint[0].texcoord;
+    float timestep = 1.0f/vdivisions;
     for (int i=1; i<vdivisions; i++)
     {
         // Endpoints
-        t = i*timestep;
+        float t = i*timestep;
         segment.end = bezier(bcp1, bcp2, bcp3, bcp4, t);
         segment.endWidthVector = mix(startWidthVector, endWidthVector, t);
         segment.endCurvatureHeight = tempheight;
