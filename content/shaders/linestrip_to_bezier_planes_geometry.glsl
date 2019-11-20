@@ -2,6 +2,7 @@
 
 layout(lines) in;
 layout(triangle_strip, max_vertices = 18) out;
+const int vdivisions = 3;
 
 layout (std140, binding = 1) uniform Camera
 {
@@ -41,12 +42,8 @@ struct StripData
   vec3 endCurvatureHeight;
   vec3 startNormal;
   vec3 endNormal;
-  float vBegin;
-  float vEnd;
-  float uBegin1;
-  float uBegin2;
-  float uEnd1;
-  float uEnd2;
+  vec3 startTexcoord; // ustart1, vstart, ustart2
+  vec3 endTexcoord;   // uend1, vend, uend2
 };
 
 vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
@@ -91,19 +88,19 @@ void GenerateQuad(StripData data)
     vertex.normal = data.startNormal;
     vertex.position = bottomleftws.xyz;
     vertex.color = bottomleftws;
-    vertex.tcoord = vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.startTexcoord.b, data.startTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = bottomrightt;
     vertex.normal = data.endNormal;
     vertex.position = bottomrightws.xyz;
     vertex.color = bottomrightws;
-    vertex.tcoord = vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.startTexcoord.r, data.startTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? topleftt : toprightt;
     vertex.normal = data.endNormal;
     vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
     vertex.color = flip_triangle? topleftws : toprightws;
-    vertex.tcoord = flip_triangle? vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f) : vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(data.endTexcoord.b, data.endTexcoord.g, 0.0f, 1.0f) : vec4(data.endTexcoord.r, data.endTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 
@@ -112,87 +109,19 @@ void GenerateQuad(StripData data)
     vertex.normal = data.endNormal;
     vertex.position = toprightws.xyz;
     vertex.color = toprightws;
-    vertex.tcoord = vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.endTexcoord.r, data.endTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = topleftt;
     vertex.normal = data.startNormal;
     vertex.position = topleftws.xyz;
     vertex.color = topleftws;
-    vertex.tcoord = vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f);
+    vertex.tcoord = vec4(data.endTexcoord.b, data.endTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     gl_Position = flip_triangle? bottomrightt : bottomleftt;
     vertex.normal = data.startNormal;
     vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
     vertex.color = flip_triangle? bottomrightws : bottomleftws;
-    vertex.tcoord = flip_triangle? vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f) : vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
-    EmitVertex();
-    EndPrimitive();
-}
-
-void GenerateDoubleQuad(StripData data)
-{
-    vec3 bottomleft  = data.start + data.startWidthVector;
-    vec3 bottomright = data.start - data.startWidthVector;
-    vec3 topright    = data.end   - data.endWidthVector;
-    vec3 topleft     = data.end   + data.endWidthVector;
-
-    // Determine triangle split (some triangles become really thin if this check is not done)
-    vec3 forward = data.end-data.start;
-    vec3 opposite_dir = topright-topleft;
-    bool flip_triangle = dot(forward, opposite_dir) > 0;
-   
-    // world space
-    vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
-    vec4 bottomrightws = model * vec4(bottomright, 1.0f);
-    vec4 toprightws = model * vec4(topright, 1.0f);
-    vec4 topleftws = model * vec4(topleft, 1.0f);
-
-    // clip space
-    mat4 vp = projection * view;
-    vec4 bottomleftt = vp * bottomleftws;
-    vec4 bottomrightt = vp * bottomrightws;
-    vec4 toprightt = vp * toprightws;
-    vec4 topleftt = vp * topleftws;
-
-    // Triangle 1
-    gl_Position = bottomleftt;
-    vertex.normal = data.startNormal;
-    vertex.position = bottomleftws.xyz;
-    vertex.color = bottomleftws;
-    vertex.tcoord = vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = bottomrightt;
-    vertex.normal = data.endNormal;
-    vertex.position = bottomrightws.xyz;
-    vertex.color = bottomrightws;
-    vertex.tcoord = vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = flip_triangle? topleftt : toprightt;
-    vertex.normal = data.endNormal;
-    vertex.position = flip_triangle? topleftws.xyz : toprightws.xyz;
-    vertex.color = flip_triangle? topleftws : toprightws;
-    vertex.tcoord = flip_triangle? vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f) : vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
-    EmitVertex();
-    EndPrimitive();
-
-    // Triangle 2
-    gl_Position = toprightt;
-    vertex.normal = data.endNormal;
-    vertex.position = toprightws.xyz;
-    vertex.color = toprightws;
-    vertex.tcoord = vec4(data.uEnd1, data.vEnd, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = topleftt;
-    vertex.normal = data.startNormal;
-    vertex.position = topleftws.xyz;
-    vertex.color = topleftws;
-    vertex.tcoord = vec4(data.uEnd2, data.vEnd, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = flip_triangle? bottomrightt : bottomleftt;
-    vertex.normal = data.startNormal;
-    vertex.position = flip_triangle? bottomrightws.xyz : bottomleftws.xyz;
-    vertex.color = flip_triangle? bottomrightws : bottomleftws;
-    vertex.tcoord = flip_triangle? vec4(data.uBegin1, data.vBegin, 0.0f, 1.0f) : vec4(data.uBegin2, data.vBegin, 0.0f, 1.0f);
+    vertex.tcoord = flip_triangle? vec4(data.startTexcoord.r, data.startTexcoord.g, 0.0f, 1.0f) : vec4(data.startTexcoord.b, data.startTexcoord.g, 0.0f, 1.0f);
     EmitVertex();
     EndPrimitive();
 }
@@ -204,11 +133,30 @@ void main()
     vec3 startWidthVector = controlpoint[0].bitangent*controlpoint[0].width;
     vec3 endWidthVector = controlpoint[1].bitangent*controlpoint[1].width;
 
-    // 4 points
+    // Bezier control points
     vec3 p1 = start;
     vec3 p2 = start + controlpoint[0].tangent;
     vec3 p3 = end - controlpoint[1].tangent;
     vec3 p4 = end;
+
+    // float timestep = 1.0f/vdivisions;
+    // float t = 0.0f;
+    // StripData data;
+    // data.start = start;
+    // data.startWidthVector = startWidthVector;
+    // //data.startCurvatureHeight
+    // data.startNormal = controlpoint[0].normal;
+    // data.start
+    // for (int i=0; i<vdivisions-1; i++)
+    // {
+    //     data.end = bezier(b1, b2, b3, b4, t);
+
+    //     // update for next iteration
+    //     data.start = data.end;
+    //     t += timestep;
+    // }
+    // // TODO: End case
+    // data.end = end;
 
     // Get bezier points
     float t1 = 0.33f;
@@ -254,12 +202,8 @@ void main()
         b1widthvec, // wrong
         controlpoint[0].normal,
         b1normal,
-        vstart,
-        v1,
-        ustart1,
-        ustart2,
-        u11,
-        u12
+        vec3(ustart1, vstart, ustart2),
+        vec3(u11, v1, u12)
     ));
     GenerateQuad(StripData(
         b1,
@@ -270,12 +214,8 @@ void main()
         b1widthvec, // wrong
         b1normal,
         b2normal,
-        v1,
-        v2,
-        u11,
-        u12,
-        u21,
-        u22
+        vec3(u11, v1, u12),
+        vec3(u21, v2, u22)
     ));
     GenerateQuad(StripData(        
         b2,
@@ -286,11 +226,7 @@ void main()
         b1widthvec, // wrong
         b2normal,
         controlpoint[1].normal,
-        v2,
-        vend,
-        u21,
-        u22,
-        uend1,
-        uend2
+        vec3(u21, v2, u22),
+        vec3(uend1, vend, uend2)
     ));
 }
