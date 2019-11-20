@@ -3,7 +3,6 @@
 layout(lines) in;
 layout(triangle_strip, max_vertices = 54) out;
 const int vdivisions = 3;
-const float tempheight = 0.01f;
 
 layout (std140, binding = 1) uniform Camera
 {
@@ -20,7 +19,8 @@ in CPAttrib
     vec3 bitangent;
     vec3 texcoord;
     float width;
-    // height/curvature
+    float thickness;
+    int shape;
 } controlpoint[];
 
 // World space attributes
@@ -35,16 +35,17 @@ out VertexAttrib
 // This data is used to define a strip of hair
 struct SegmentData
 {
-  vec3 start;
-  vec3 end;
-  vec3 startWidthVector;
-  vec3 endWidthVector;
-  float startCurvatureHeight;
-  float endCurvatureHeight;
-  vec3 startNormal;
-  vec3 endNormal;
-  vec3 startTexcoord; // ustart1, vstart, ustart2
-  vec3 endTexcoord;   // uend1, vend, uend2
+    int shape;
+    vec3 start;
+    vec3 end;
+    vec3 startWidthVector;
+    vec3 endWidthVector;
+    float startCurvatureHeight;
+    float endCurvatureHeight;
+    vec3 startNormal;
+    vec3 endNormal;
+    vec3 startTexcoord; // ustart1, vstart, ustart2
+    vec3 endTexcoord;   // uend1, vend, uend2
 };
 
 vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
@@ -149,8 +150,8 @@ void GenerateDoubleQuad(SegmentData data)
     vec3 topmiddle = (topleft+topright)/2.0f;
 
     // apply height offset
-    vec3 heightdirection1 = data.startNormal * tempheight/2.0f;
-    vec3 heightdirection2 = data.endNormal * tempheight/2.0f;
+    vec3 heightdirection1 = data.startNormal * data.startCurvatureHeight/2.0f;
+    vec3 heightdirection2 = data.endNormal * data.endCurvatureHeight/2.0f;
     bottomleft -= heightdirection1;
     bottommiddle += heightdirection1;
     bottomright -= heightdirection1;
@@ -212,8 +213,8 @@ void GenerateTrippleQuad(SegmentData data)
     vec3 topmiddler = (topmiddle + topright)/2.0f;
 
     // apply height offset
-    vec3 heightdirection1 = data.startNormal * tempheight/2.0f;
-    vec3 heightdirection2 = data.endNormal * tempheight/2.0f;
+    vec3 heightdirection1 = data.startNormal * data.startCurvatureHeight/2.0f;
+    vec3 heightdirection2 = data.endNormal * data.endCurvatureHeight/2.0f;
     bottomleft -= heightdirection1;
     bottommiddlel += heightdirection1;
     bottommiddler += heightdirection1;
@@ -271,6 +272,16 @@ void GenerateTrippleQuad(SegmentData data)
     EmitQuad(bottommiddlert, bottomrightt, toprightt, topmiddlert, bottommiddlerws, bottomrightws, toprightws, topmiddlerws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
 }
 
+void GenerateSegment(SegmentData data)
+{
+    switch (data.shape)
+    {
+        case 0: { GenerateSingleQuad(data); break; }
+        case 1: { GenerateDoubleQuad(data); break; }
+        case 2: { GenerateTrippleQuad(data); break; }
+    }
+}
+
 void main()
 {
     vec3 start = gl_in[0].gl_Position.xyz;
@@ -285,9 +296,10 @@ void main()
     vec3 bcp4 = end;
 
     SegmentData segment;
+    segment.shape = controlpoint[0].shape; // all divisions except the last have the same shape as the first control point
     segment.start = start;
     segment.startWidthVector = startWidthVector;
-    segment.startCurvatureHeight = tempheight;
+    segment.startCurvatureHeight = controlpoint[0].thickness;
     segment.startNormal = controlpoint[0].normal;
     segment.startTexcoord = controlpoint[0].texcoord;
     float timestep = 1.0f/vdivisions;
@@ -297,12 +309,12 @@ void main()
         float t = i*timestep;
         segment.end = bezier(bcp1, bcp2, bcp3, bcp4, t);
         segment.endWidthVector = mix(startWidthVector, endWidthVector, t);
-        segment.endCurvatureHeight = tempheight;
+        segment.endCurvatureHeight = mix(controlpoint[0].thickness, controlpoint[1].thickness, t);
         segment.endNormal = normalize(mix(controlpoint[0].normal, controlpoint[1].normal, t));
         segment.endTexcoord = mix(controlpoint[0].texcoord, controlpoint[1].texcoord, t);
 
         // Generate
-        GenerateDoubleQuad(segment);
+        GenerateSegment(segment);
 
         // Update startpoints for next iteration
         segment.start = segment.end;
@@ -313,10 +325,11 @@ void main()
     }
 
     // Generate last segment
+    segment.shape = controlpoint[1].shape; // todo: solve transition
     segment.end = end;
     segment.endWidthVector = endWidthVector;
-    segment.endCurvatureHeight = tempheight;
+    segment.endCurvatureHeight = controlpoint[1].thickness;
     segment.endNormal = controlpoint[1].normal;
     segment.endTexcoord = controlpoint[1].texcoord;
-    GenerateDoubleQuad(segment);
+    GenerateSegment(segment);
 }

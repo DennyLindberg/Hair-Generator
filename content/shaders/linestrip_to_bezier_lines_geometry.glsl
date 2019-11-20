@@ -18,6 +18,8 @@ in CPAttrib
     vec3 bitangent;
     vec3 texcoord;
     float width;
+    float thickness;
+    int shape;
 } controlpoint[];
 
 // World space attributes

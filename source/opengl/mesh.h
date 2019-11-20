@@ -140,6 +140,8 @@ protected:
 	GLuint tangentBuffer = 0;
 	GLuint texcoordBuffer = 0;
 	GLuint widthBuffer = 0;
+	GLuint thicknessBuffer = 0;
+	GLuint shapeBuffer = 0;
 
 	GLuint indexBuffer = 0;
 
@@ -149,6 +151,8 @@ protected:
 	std::vector<glm::fvec3> controlTangents;
 	std::vector<glm::fvec3> controlTexcoords; // {ustart, v, uend}
 	std::vector<float> controlWidths;
+	std::vector<float> controlThickness;
+	std::vector<int>   controlShapes;
 
 	std::vector<unsigned int> indices;
 
@@ -161,7 +165,9 @@ public:
 		const std::vector<glm::fvec3>& normals,
 		const std::vector<glm::fvec3>& tangents,
 		const std::vector<glm::fvec3>& texcoords,
-		const std::vector<float>& widths
+		const std::vector<float>& widths,
+		const std::vector<float>& thickness,
+		const std::vector<int>& shapes
 	);
 
 	void Clear();
