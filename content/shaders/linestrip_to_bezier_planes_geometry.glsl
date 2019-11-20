@@ -1,9 +1,9 @@
 #version 420 core
 
 layout(lines) in;
-layout(triangle_strip, max_vertices = 18) out;
+layout(triangle_strip, max_vertices = 36) out;
 const int vdivisions = 3;
-const float tempheight = 0.05f;
+const float tempheight = 0.01f;
 
 layout (std140, binding = 1) uniform Camera
 {
@@ -138,26 +138,60 @@ void GenerateSingleQuad(SegmentData data)
 
 void GenerateDoubleQuad(SegmentData data)
 {
+    // base quad
     vec3 bottomleft  = data.start + data.startWidthVector;
     vec3 bottomright = data.start - data.startWidthVector;
     vec3 topright    = data.end   - data.endWidthVector;
     vec3 topleft     = data.end   + data.endWidthVector;
-   
+
+    // middle split
+    vec3 bottommiddle = (bottomleft+bottomright)/2.0f;
+    vec3 topmiddle = (topleft+topright)/2.0f;
+
+    // apply height offset
+    vec3 heightdirection1 = data.startNormal * tempheight/2.0f;
+    vec3 heightdirection2 = data.endNormal * tempheight/2.0f;
+    bottomleft -= heightdirection1;
+    bottommiddle += heightdirection1;
+    bottomright -= heightdirection1;
+    topleft -= heightdirection2;
+    topmiddle += heightdirection2;
+    topright -= heightdirection2;
+
     // world space
     vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
+    vec4 bottommiddlews = model * vec4(bottommiddle, 1.0f);
     vec4 bottomrightws = model * vec4(bottomright, 1.0f);
-    vec4 toprightws = model * vec4(topright, 1.0f);
+
     vec4 topleftws = model * vec4(topleft, 1.0f);
+    vec4 topmiddlews = model * vec4(topmiddle, 1.0f);
+    vec4 toprightws = model * vec4(topright, 1.0f);
 
     // clip space
     mat4 vp = projection * view;
     vec4 bottomleftt = vp * bottomleftws;
+    vec4 bottommiddlet = vp * bottommiddlews;
     vec4 bottomrightt = vp * bottomrightws;
-    vec4 toprightt = vp * toprightws;
+
     vec4 topleftt = vp * topleftws;
+    vec4 topmiddlet = vp * topmiddlews;
+    vec4 toprightt = vp * toprightws;
+
+    // texcoord
+    vec3 texcoordmid1 = data.startTexcoord;
+    vec3 texcoordmid2 = data.endTexcoord;
+    texcoordmid1.r = (texcoordmid1.r + texcoordmid1.b)/2.0f;
+    texcoordmid2.r = (texcoordmid2.r + texcoordmid2.b)/2.0f;
 
     bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topright, topleft);
-    EmitQuad(bottomleftt, bottomrightt, toprightt, topleftt, bottomleftws, bottomrightws, toprightws, topleftws, data.startNormal, data.endNormal, data.startTexcoord, data.endTexcoord, bFlipTriangle);
+    EmitQuad(bottomleftt, bottommiddlet, topmiddlet, topleftt, bottomleftws, bottommiddlews, topmiddlews, topleftws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
+
+    // texcoord
+    texcoordmid1 = data.startTexcoord;
+    texcoordmid2 = data.endTexcoord;
+    texcoordmid1.b = (texcoordmid1.r + texcoordmid1.b)/2.0f;
+    texcoordmid2.b = (texcoordmid2.r + texcoordmid2.b)/2.0f;
+    EmitQuad(bottommiddlet, bottomrightt, toprightt, topmiddlet, bottommiddlews, bottomrightws, toprightws, topmiddlews, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
 }
 
 void main()
@@ -192,7 +226,7 @@ void main()
         segment.endTexcoord = mix(controlpoint[0].texcoord, controlpoint[1].texcoord, t);
 
         // Generate
-        GenerateSingleQuad(segment);
+        GenerateDoubleQuad(segment);
 
         // Update startpoints for next iteration
         segment.start = segment.end;
@@ -208,5 +242,5 @@ void main()
     segment.endCurvatureHeight = tempheight;
     segment.endNormal = controlpoint[1].normal;
     segment.endTexcoord = controlpoint[1].texcoord;
-    GenerateSingleQuad(segment);
+    GenerateDoubleQuad(segment);
 }
