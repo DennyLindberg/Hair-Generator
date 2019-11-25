@@ -84,7 +84,7 @@ void ShaderManager::UpdateShader(GLProgram& targetProgram, fs::path filePath, Sh
 		return;
 	}
 
-	printf("\r\n=======\r\n%s\r\n=======\r\n\r\n", text.c_str());
+	//printf("\r\n=======\r\n%s\r\n=======\r\n\r\n", text.c_str());
 	std::wstring MessageType = L"";
 	switch (type)
 	{

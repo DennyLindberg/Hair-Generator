@@ -121,7 +121,7 @@ printf(R"(
 	LightUBO.Allocate(16 * 2);
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram lineShader, backgroundShader, phongShader, hairShader, bezierLinesShader;
+	GLProgram lineShader, backgroundShader, phongShader, hairShader, bezierLinesShader, shellsShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(shaderFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
@@ -130,6 +130,7 @@ printf(R"(
 	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
 	shaderManager.LoadLiveShader(hairShader, L"bezier_vertex.glsl", L"hair_fragment.glsl", L"linestrip_to_bezier_planes_geometry.glsl");
 	shaderManager.LoadLiveShader(bezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"linestrip_to_bezier_lines_geometry.glsl");
+	shaderManager.LoadLiveShader(shellsShader, L"shells_vertex.glsl", L"shells_fragment.glsl", L"shells_geometry.glsl");
 
 	// Initialize model values
 	glm::mat4 identity_transform{ 1.0f };
@@ -141,6 +142,8 @@ printf(R"(
 	hairShader.SetUniformMat4("model", identity_transform);
 	bezierLinesShader.Use();
 	bezierLinesShader.SetUniformMat4("model", identity_transform);
+	shellsShader.Use();
+	shellsShader.SetUniformMat4("model", identity_transform);
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -189,7 +192,7 @@ printf(R"(
 		Load mesh
 	*/
 	GLTriangleMesh bunnymesh, malemesh, femalemesh;
-	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
+	GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
 	//GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
 	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
 
@@ -321,7 +324,7 @@ printf(R"(
 		CameraUBO.SetData(glm::value_ptr(camera.GetPosition()), 128, 16);
 
 		// Render mesh
-		phongShader.Use();
+		shellsShader.Use();
 		phongShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
 		malemesh.Draw();
 		phongShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
@@ -332,7 +335,7 @@ printf(R"(
 		hair_color.UseForDrawing(0);
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
-		bezierStrips.Draw();
+		//bezierStrips.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -343,7 +346,7 @@ printf(R"(
 
 		// Guide lines
 		bezierLinesShader.Use();
-		bezierStrips.Draw();
+		//bezierStrips.Draw();
 		
 		// Coordinate axis'
 		lineShader.Use();
