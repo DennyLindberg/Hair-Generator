@@ -47,6 +47,7 @@ int main()
 	fs::path textureFolder = fs::current_path().parent_path() / "content" / "textures";
 	fs::path shaderFolder = fs::current_path().parent_path() / "content" / "shaders";
 	fs::path meshFolder = fs::current_path().parent_path() / "content" / "meshes";
+	fs::path curvesFolder = fs::current_path().parent_path() / "content" / "curves";
 	InitializeApplication(ApplicationSettings{
 		WINDOW_VSYNC, WINDOW_FULLSCREEN, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_RATIO, contentFolder
 	});
@@ -111,6 +112,7 @@ printf(R"(
 	GLTexture hair_color{ textureFolder / "sparrow_roots.png" };
 	GLTexture hair_alpha{ textureFolder / "sparrow_alpha.png" };
 	GLTexture hair_id{ textureFolder / "sparrow_id.png" };
+	GLTexture scalp{ textureFolder / "scalp.png" };
 	defaultTexture.UseForDrawing();
 
 	// Uniform Buffer Object containing matrices
@@ -188,12 +190,17 @@ printf(R"(
 	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsTexcoord2, bezierStripsWidths2, bezierStripsThickness2, bezierStripsSegmentShape2, bezierStripsSegmentSubdivs2);
 	bezierStrips.SendToGPU();
 
+	GLMesh::LoadCurves(curvesFolder / "longhair.json", bezierStrips);
+	bezierStrips.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
+	bezierStrips.transform.scale = glm::fvec3{ 0.0125f };
+
+
 	/*
 		Load mesh
 	*/
 	GLTriangleMesh bunnymesh, malemesh, femalemesh;
-	GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
-	//GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
+	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
+	GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
 	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
 
 	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
@@ -324,7 +331,7 @@ printf(R"(
 		CameraUBO.SetData(glm::value_ptr(camera.GetPosition()), 128, 16);
 
 		// Render mesh
-		shellsShader.Use();
+		phongShader.Use();
 		phongShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
 		malemesh.Draw();
 		phongShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
@@ -335,7 +342,8 @@ printf(R"(
 		hair_color.UseForDrawing(0);
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
-		//bezierStrips.Draw();
+		hairShader.SetUniformMat4("model", bezierStrips.transform.ModelMatrix());
+		bezierStrips.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

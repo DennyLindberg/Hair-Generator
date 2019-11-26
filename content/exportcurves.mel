@@ -1,0 +1,190 @@
+/*
+    // Values are serialized in this order (in triplets)
+    0 - first control point
+      1 - first tangent out
+      2 - next tangent in
+    3 - next control point
+      4 - next tangent out
+      5 - ... tangent in
+    6 - cp
+      7 - ... tangent out
+      8 - ... tangent in
+    9 - cp      
+    
+    // Note that the last tangent out is missing
+*/
+
+// $values contain the result from `getAttr "bezierobject.cv[*]"`;
+proc float[] GetControlPoints(float $values[])
+{
+    float $pos[] = {};
+    int $i;
+    for ($i=0; $i<size($values); $i += 9)
+    {
+        $pos[size($pos)] = $values[$i+0];
+        $pos[size($pos)] = $values[$i+1];
+        $pos[size($pos)] = $values[$i+2];
+    }
+    
+    return $pos;
+}
+
+// $values should contain the result from `getAttr "bezierobject.cv[*]"`
+// $positions should be the result from GetControlPoints
+proc float[] GetTangentOuts(float $values[], float $positions[])
+{
+    float $tout[] = {};
+    int $j = 0;
+    for ($i=3; $i<size($values); $i += 9)
+    {
+        $tout[size($tout)] = $values[$i+0] - $positions[$j+0];
+        $tout[size($tout)] = $values[$i+1] - $positions[$j+1];
+        $tout[size($tout)] = $values[$i+2] - $positions[$j+2];
+        
+        $j += 3;
+    }
+    
+    // Last tangent out does not exist, use tangent in instead
+    int $lasttan = size($values) - 1;
+    int $lastpos = size($positions) - 1;
+    $tout[size($tout)] = $positions[$lastpos-2] - $values[$lasttan-5];
+    $tout[size($tout)] = $positions[$lastpos-1] - $values[$lasttan-4];
+    $tout[size($tout)] = $positions[$lastpos-0] - $values[$lasttan-3];
+    
+    return $tout;
+}
+
+proc string FloatArrayToString(float $values[])
+{
+    string $out = "";
+    int $i;
+    for ($i=0; $i<size($values); $i++)
+    {
+        $out += $values[$i] + " ";
+    }
+    return $out;
+}
+
+proc string IntegerArrayToString(int $values[])
+{
+    string $out = "";
+    int $i;
+    for ($i=0; $i<size($values); $i++)
+    {
+        $out += $values[$i] + " ";
+    }
+    return $out;
+}
+
+global proc ExportAllCurves()
+{
+    string $allTransforms[] = `ls -tr`;
+    
+    string $output = "";
+    int $curvecount = 0;
+    for ($transform in $allTransforms)
+    {
+        // Get bezier curve (apply any transforms it might have)
+        string $beziershapes[] = `listRelatives -s $transform`;
+        if (size($beziershapes) == 0 || `objectType $beziershapes[0]` != "bezierCurve")
+        {
+            continue;
+        }
+        $curvecount++;
+        string $beziercurve = $beziershapes[0];
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1 $transform;
+        
+        // Extract positions and outward going tangents
+        float $values[] = `getAttr ($beziercurve + ".cv[*]")`;
+
+        // Output values
+        float $pos[] = GetControlPoints($values);
+        float $normals[] = {};
+        float $tout[] = GetTangentOuts($values, $pos);
+        float $texcoords[] = {};
+        float $widths[] = {};
+        float $thickness[] = {};
+        int $shapes[] = {};
+        int $subdivisions[] = {};
+
+        // Apply world position (positions are in local space of the shape transform)
+        int $i;
+        float $ws_origin[] = `xform -q -a -ws -t $transform`;
+        for ($i=0; $i<size($pos); $i+=3)
+        {
+            $pos[$i+0] += $ws_origin[0];
+            $pos[$i+1] += $ws_origin[1];
+            $pos[$i+2] += $ws_origin[2];
+        }
+        
+        // DEBUG
+        if (false)
+        {
+            for ($i=0; $i<size($pos); $i += 3)
+            {
+                spaceLocator -p $pos[$i] $pos[$i+1] $pos[$i+2];
+            }
+            
+            for ($i=0; $i<size($tout); $i += 3)
+            {
+                spaceLocator -p ($pos[$i] + $tout[$i]) ($pos[$i+1] + $tout[$i+1]) ($pos[$i+2] + $tout[$i+2]);
+            }            
+        }
+        
+        int $total_steps = size($pos)/3-1;
+        for ($i=0; $i<size($pos); $i += 3)
+        {
+            float $step = $i / 3.0;
+            float $progress = $step/$total_steps;
+
+            // Tripple value entries
+            //float $pos[] = {};
+            $normals[size($normals)] = 1.0;
+            $normals[size($normals)] = 0.0;
+            $normals[size($normals)] = 0.0;
+            //float $tout[] = {};
+            $texcoords[size($texcoords)] = 0.1;
+            $texcoords[size($texcoords)] = 0.01*(1.0 - $progress) + 1.0 * $progress;
+            $texcoords[size($texcoords)] = 0.2;
+            
+            // Single value entries
+            $widths[size($widths)] = 1.0;
+            $thickness[size($thickness)] = 0.2;
+            $shapes[size($shapes)] = 2;
+            $subdivisions[size($subdivisions)] = 4;
+        }
+
+        /*
+            Each line must match this order in cpp:
+                std::vector<glm::fvec3> points;
+                std::vector<glm::fvec3> normals;
+                std::vector<glm::fvec3> tangents;
+                std::vector<glm::fvec3> texcoords;
+                std::vector<float> widths;
+                std::vector<float> thickness;
+                std::vector<int> shapes;
+                std::vector<int> subdivisions;
+        */
+        $output += FloatArrayToString($pos) + "\r\n";
+        $output += FloatArrayToString($normals) + "\r\n";
+        $output += FloatArrayToString($tout) + "\r\n";
+        $output += FloatArrayToString($texcoords) + "\r\n";
+        $output += FloatArrayToString($widths) + "\r\n";
+        $output += FloatArrayToString($thickness) + "\r\n";
+        $output += IntegerArrayToString($shapes) + "\r\n";
+        $output += IntegerArrayToString($subdivisions) + "\r\n";
+
+    }
+    
+    string $scenename = `file -q -sn -shn`;
+    $scenename = `substitute ".mb" $scenename ""`;
+    string $outputfolder = dirname(`file -q -sn`);
+    string $outputfile = $outputfolder + "/" + $scenename + ".json";
+    
+    int $fileId = fopen($outputfile, "w");
+    fprint($fileId, $output);
+    fclose($fileId);
+    print("\r\nExported " + $curvecount + " curves to " + $outputfile);
+}
+
+ExportAllCurves();

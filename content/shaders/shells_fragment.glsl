@@ -18,6 +18,7 @@ layout (std140, binding = 2) uniform Light
 
 layout(binding = 0) uniform sampler2D shellColorSampler;
 layout(binding = 1) uniform sampler2D shellAlphaSampler;
+layout(binding = 2) uniform sampler2D scalpSampler;
 
 // World space attributes
 in VertexAttrib
@@ -56,23 +57,24 @@ void main()
 
     // select EITHER the head texture or the shell texture
     vec4 light = PhongLight();
-    vec3 headcolor = vec3(0.5f, 0.0f, 0.0f);
+    vec3 headcolor = vec3(0.5f, 0.5f, 0.5f);
     if (fragment.color.r == 0.0f)
     {
         color = light * vec4(headcolor, 1.0f);
     }
     else
     {
-        vec4 shellSampleAlpha = texture(shellColorSampler, texCoord);
+        vec4 shellSampleAlpha = texture(scalpSampler, texCoord*0.1f);
 
         // Masked discard
-        if (shellSampleAlpha.r < 0.5f)
+        if (shellSampleAlpha.r > 0.98f)
         {
             discard;
         }
 
-        float alpha = smoothstep(0.0f, 0.25f, fragment.color.r); // remap [0, 1.0] to [0, 0.25]
-        vec3 blend = mix(headcolor, texture(shellColorSampler, texCoord).xyz, alpha);
-        color = light * vec4(blend, 1.0f);
+        //float alpha = smoothstep(0.0f, 0.25f, fragment.color.r); // remap [0, 1.0] to [0, 0.25]
+        //vec3 blend = mix(headcolor, texture(shellColorSampler, texCoord).xyz, alpha);
+        //color = light * vec4(blend, 1.0f);
+        color = vec4(vec3(1.0f-shellSampleAlpha.r), 1.0f);
     }
 }

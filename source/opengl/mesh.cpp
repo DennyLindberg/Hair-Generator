@@ -471,7 +471,7 @@ GLBezierStrips::~GLBezierStrips()
 	glDeleteBuffers(1, &indexBuffer);
 }
 
-void GLBezierStrips::AddBezierStrip(
+bool GLBezierStrips::AddBezierStrip(
 	const std::vector<glm::fvec3>& points,
 	const std::vector<glm::fvec3>& normals,
 	const std::vector<glm::fvec3>& tangents,
@@ -484,7 +484,7 @@ void GLBezierStrips::AddBezierStrip(
 {
 	if (points.size() == 0)
 	{
-		return; // because there is no data to add
+		return false; // because there is no data to add
 	}
 
 	if (normals.size() != points.size() || 
@@ -495,7 +495,7 @@ void GLBezierStrips::AddBezierStrip(
 		shapes.size() != points.size() ||
 		subdivisions.size() != points.size())
 	{
-		return; // because of size mismatch
+		return false; // because of size mismatch
 	}
 
 	size_t newLineStart = controlPoints.size();
@@ -529,6 +529,7 @@ void GLBezierStrips::AddBezierStrip(
 	}
 
 	indices[indices.size() - 1] = RESTART_INDEX;
+	return true;
 }
 
 void GLBezierStrips::Clear()
@@ -815,6 +816,116 @@ namespace GLMesh
 		}
 
 		OutMesh.SendToGPU();
+
+		return true;
+	}
+
+	bool LoadCurves(std::filesystem::path FilePath, GLBezierStrips& OutStrips)
+	{
+		OutStrips.Clear();
+
+		std::ifstream ifs(FilePath);
+		if (!ifs) 
+		{
+			printf("\r\nCould not open %ws", FilePath.c_str());
+			return false;
+		}
+
+		// Target vectors to fill up
+		std::vector<glm::fvec3> points;
+		std::vector<glm::fvec3> normals;
+		std::vector<glm::fvec3> tangents;
+		std::vector<glm::fvec3> texcoords;
+		std::vector<float> widths;
+		std::vector<float> thickness;
+		std::vector<int> shapes;
+		std::vector<int> subdivisions;
+
+		// Temporaries during parsing
+		int lineid = 0;
+		int ivalue = 0;
+		float fvalue = 0.0f;
+		glm::fvec3 cachevec3{ 0.0f };
+		std::vector<glm::fvec3>* targetvec3 = nullptr;
+		std::vector<float>* targetfloat = nullptr;
+		std::vector<int>* targetint = nullptr;
+
+		// Parse loop
+		int num_loaded_curves = 0;
+		std::string line;
+		while (std::getline(ifs, line))
+		{
+			std::istringstream string_of_values(line);
+			
+			// Determine vector to write to based on line id
+			switch (lineid)
+			{
+			case 0: { targetvec3 = &points; break; }
+			case 1: { targetvec3 = &normals; break; }
+			case 2: { targetvec3 = &tangents; break; }
+			case 3: { targetvec3 = &texcoords; break; }
+			case 4: { targetfloat = &widths; break; }
+			case 5: { targetfloat = &thickness; break; }
+			case 6: { targetint = &shapes; break; }
+			case 7: { targetint = &subdivisions; break; }
+			default: {}
+			}
+
+			if (lineid >= 0 && lineid <= 3)
+			{
+				int i = 0;
+				while (string_of_values >> fvalue)
+				{
+					cachevec3[i % 3] = fvalue;
+					if (i % 3 == 2)
+					{
+						targetvec3->push_back(cachevec3);
+					}
+					i++;
+				}
+			}
+			else if (lineid >= 4 && lineid <= 5)
+			{
+				while (string_of_values >> fvalue)
+				{
+					targetfloat->push_back(fvalue);
+				}
+			}
+			else if (lineid >= 6 && lineid <= 7)
+			{
+				while (string_of_values >> ivalue)
+				{
+					targetint->push_back(ivalue);
+				}
+			}
+
+			lineid = (++lineid) % 8;
+			
+			if (lineid == 0)
+			{
+				bool new_strip_success = OutStrips.AddBezierStrip(points, normals, tangents, texcoords, widths, thickness, shapes, subdivisions);
+				points.clear();
+				normals.clear();
+				tangents.clear();
+				texcoords.clear();
+				widths.clear();
+				thickness.clear();
+				shapes.clear();
+				subdivisions.clear();
+
+				if (!new_strip_success)
+				{
+					printf("\r\nFailed to parse bezier strip");
+				}
+				else
+				{
+					num_loaded_curves++;
+				}
+			}
+		}
+		
+		OutStrips.SendToGPU();
+		printf("\r\nLoaded %d curves from %ws", num_loaded_curves, FilePath.c_str());
 
 		return true;
 	}
