@@ -63,6 +63,9 @@ int main()
 	glGenVertexArrays(1, &defaultVao);
 	glBindVertexArray(defaultVao);
 
+	FileListener fileListener;
+	fileListener.StartThread(curvesFolder);
+
 printf(R"(
 ====================================================================
 	
@@ -191,8 +194,13 @@ printf(R"(
 	bezierStrips.SendToGPU();
 
 	GLMesh::LoadCurves(curvesFolder / "longhair.json", bezierStrips);
-	bezierStrips.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
-	bezierStrips.transform.scale = glm::fvec3{ 0.0125f };
+	fileListener.Bind(L"longhair.json", [&bezierStrips](fs::path filePath) -> void 
+		{
+			GLMesh::LoadCurves(filePath, bezierStrips);
+			bezierStrips.SendToGPU();
+		}
+	);
+
 
 
 	/*
@@ -205,6 +213,8 @@ printf(R"(
 
 	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
 	femalemesh.transform.scale = glm::vec3(0.0125f);
+	bezierStrips.transform.position = femalemesh.transform.position;
+	bezierStrips.transform.scale = femalemesh.transform.scale;
 
 	/*
 		Coordinate Axis Lines
@@ -253,6 +263,7 @@ printf(R"(
 
 		window.SetTitle("FPS: " + FpsString(deltaTime));
 		shaderManager.CheckLiveShaders();
+		fileListener.ProcessCallbacksOnMainThread();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
@@ -351,10 +362,6 @@ printf(R"(
 		
 		// Clear depth so that we can draw lines on top of everything
 		glClear(GL_DEPTH_BUFFER_BIT);
-
-		// Guide lines
-		bezierLinesShader.Use();
-		//bezierStrips.Draw();
 		
 		// Coordinate axis'
 		lineShader.Use();
@@ -362,6 +369,11 @@ printf(R"(
 		coordinateReferenceLines.Draw();
 		if (renderTransformHierarchy)
 		{
+			// Guide lines
+			bezierLinesShader.Use();
+			bezierLinesShader.SetUniformMat4("model", bezierStrips.transform.ModelMatrix());
+			bezierStrips.Draw();
+
 			hierarchyAxisLines.Clear();
 			MeshTransform a;
 			MeshTransform b;

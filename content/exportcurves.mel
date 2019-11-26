@@ -76,8 +76,23 @@ proc string IntegerArrayToString(int $values[])
     return $out;
 }
 
+proc FreezeTransformsOnBezierCurve(string $bezierCurveTransform)
+{
+    /*
+        Move existing arrows out of curve, into a temp group, freeze transforms on bezier curve and move arrows back...
+    */
+    group -em -n "tempatempa";
+    string $children[] = `listRelatives -f -c -type transform $bezierCurveTransform`;
+    parent $children "tempatempa";
+    makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1 $bezierCurveTransform;
+    $children = `listRelatives -f -c -type transform "tempatempa"`;
+    parent $children $bezierCurveTransform;
+    delete "tempatempa";
+}
+
 global proc ExportAllCurves()
 {
+    string $selection[] = `ls -sl`;
     string $allTransforms[] = `ls -tr`;
     
     string $output = "";
@@ -86,13 +101,17 @@ global proc ExportAllCurves()
     {
         // Get bezier curve (apply any transforms it might have)
         string $beziershapes[] = `listRelatives -s $transform`;
-        if (size($beziershapes) == 0 || `objectType $beziershapes[0]` != "bezierCurve")
+        if (size($beziershapes) == 0 || `gmatch $beziershapes[0] "*normal*"`)
+        {
+            continue;
+        }
+        if (!`objExists $beziershapes[0]` || `objectType $beziershapes[0]` != "bezierCurve")
         {
             continue;
         }
         $curvecount++;
         string $beziercurve = $beziershapes[0];
-        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1 $transform;
+        FreezeTransformsOnBezierCurve($transform);
         
         // Extract positions and outward going tangents
         float $values[] = `getAttr ($beziercurve + ".cv[*]")`;
@@ -137,11 +156,24 @@ global proc ExportAllCurves()
             float $step = $i / 3.0;
             float $progress = $step/$total_steps;
 
+
             // Tripple value entries
             //float $pos[] = {};
-            $normals[size($normals)] = 1.0;
-            $normals[size($normals)] = 0.0;
-            $normals[size($normals)] = 0.0;
+            string $arrow = $transform + "|normal"+($i/3);
+            if (`objExists($arrow)`)
+            {
+                // extract z-axis direction from world transform matrix
+                float $mat[] = `xform -q -a -ws -matrix $arrow`;
+                $normals[size($normals)] = $mat[8];
+                $normals[size($normals)] = $mat[9];
+                $normals[size($normals)] = $mat[10];
+            }
+            else
+            {
+                $normals[size($normals)] = 1.0;
+                $normals[size($normals)] = 0.0;
+                $normals[size($normals)] = 0.0;
+            }
             //float $tout[] = {};
             $texcoords[size($texcoords)] = 0.1;
             $texcoords[size($texcoords)] = 0.01*(1.0 - $progress) + 1.0 * $progress;
@@ -185,6 +217,76 @@ global proc ExportAllCurves()
     fprint($fileId, $output);
     fclose($fileId);
     print("\r\nExported " + $curvecount + " curves to " + $outputfile);
+
+    select -r $selection;
 }
 
-ExportAllCurves();
+/*
+    Interaction
+*/
+proc MakeArrowAtPoint(string $bezierTransform, float $controlpoints[], int $index)
+{
+    int $numpoints = size($controlpoints)/3;
+    string $source = "inbetweenarrow";
+    if ($index == 0)
+    {
+        $source = "startarrow";
+    }
+    else if ($index == $numpoints-1)
+    {
+        $source = "endarrow";
+    }
+    
+    string $arrow = $bezierTransform + "|normal"+$index;
+    if (!`objExists($arrow)`)
+    {
+        string $duplicates[] = `duplicate -n ($source + "#") $source`;
+        parent $duplicates $bezierTransform;
+        $arrow = `rename $duplicates[0] ("normal"+$index)`;
+    }
+    
+    int $io = $index * 3;
+    xform -a -ws -t $controlpoints[$io] $controlpoints[$io+1] $controlpoints[$io+2] $arrow;
+}
+
+proc AddArrows(string $bezierTransform, float $controlpoints[])
+{   
+    int $numpoints = size($controlpoints)/3;
+    int $i;
+    for ($i=0; $i<$numpoints; $i++)
+    {
+       MakeArrowAtPoint($bezierTransform, $controlpoints, $i);
+    }
+}
+
+global proc UpdateAllArrows()
+{
+    string $selection[] = `ls -sl`;
+
+    string $allTransforms[] = `ls -tr`;
+    for ($transform in $allTransforms)
+    {
+        // Get bezier curve (apply any transforms it might have)
+        string $beziershapes[] = `listRelatives -s $transform`;
+        if (size($beziershapes) == 0 || `gmatch $beziershapes[0] "*normal*"`)
+        {
+            continue;
+        }
+        if (!`objExists $beziershapes[0]` || `objectType $beziershapes[0]` != "bezierCurve")
+        {
+            continue;
+        }
+
+        FreezeTransformsOnBezierCurve($transform);
+
+        /*
+            Now update the damn arrows
+        */
+        string $beziercurve = $beziershapes[0];
+        float $values[] = `getAttr ($beziercurve + ".cv[*]")`;
+        $values = GetControlPoints($values);
+        AddArrows($transform, $values);
+    } 
+
+    select -r $selection;
+}
