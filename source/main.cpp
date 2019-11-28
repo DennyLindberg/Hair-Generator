@@ -157,8 +157,6 @@ printf(R"(
 	LightUBO.SetData(glm::value_ptr(lightColor), 16, 16);
 
 	/*
-		Create line strips for testing
-
 		UV-coordinate regions based on sparrow textures
 		U							V
 		0.0 - 0.2	long/thick		0-1
@@ -170,34 +168,12 @@ printf(R"(
 		0.7-1.0		dense/short		0.7-1
 		0.7-1.0		dense/short		0.1-0.65
 	*/
-	GLBezierStrips bezierStrips;
-	std::vector<glm::fvec3> bezierStripsPoints1   = {glm::fvec3{0.0f, 0.15f,  0.0f},  glm::fvec3{0.1f, 0.15f, -0.05f}, glm::fvec3{0.2f, 0.15f, -0.4f}};
-	std::vector<glm::fvec3> bezierStripsNormals1  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
-	std::vector<glm::fvec3> bezierStripsTangents1 = { 0.2f * (bezierStripsPoints1[1] - bezierStripsPoints1[0]) + glm::fvec3{0.0f, 0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) + glm::fvec3{0.0f, -0.05f,  0.0f}, 0.2f * (bezierStripsPoints1[2] - bezierStripsPoints1[1]) };
-	std::vector<glm::fvec3> bezierStripsTexcoord1 = { glm::fvec3{0.01f, 0.01f, 0.2f}, glm::fvec3{0.01f, 0.5f, 0.2f}, glm::fvec3{0.01f, 1.0f, 0.2f} };
-	std::vector<float> bezierStripsWidths1        = { 0.1f, 0.05f, 0.02f };
-	std::vector<float> bezierStripsThickness1     = { 0.1f, 0.05f, 0.01f };
-	std::vector<int> bezierStripsSegmentShape1    = { 2, 2, 2 };
-	std::vector<int> bezierStripsSegmentSubdivs1  = { 4, 1, 0 }; // last element is pointless
-
-	std::vector<glm::fvec3> bezierStripsPoints2   = {glm::fvec3{0.0f, 0.3f, -0.0f},  glm::fvec3{0.1f, 0.3f, -0.05f}, glm::fvec3{0.2f, 0.3f, -0.4f}};
-	std::vector<glm::fvec3> bezierStripsNormals2  = {glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f},  glm::fvec3{0.0f, 1.0f,  0.0f}};
-	std::vector<glm::fvec3> bezierStripsTangents2 = { 0.2f*(bezierStripsPoints1[1]-bezierStripsPoints1[0]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]), 0.2f*(bezierStripsPoints1[2]-bezierStripsPoints1[1]) };
-	std::vector<glm::fvec3> bezierStripsTexcoord2 = { glm::fvec3{0.01f, 0.01f, 0.2f}, glm::fvec3{0.01f, 0.5f, 0.2f}, glm::fvec3{0.01f, 1.0f, 0.2f} };
-	std::vector<float> bezierStripsWidths2		  = { 0.1f/2.0f, 0.05f/2.0f, 0.02f/2.0f };
-	std::vector<float> bezierStripsThickness2	  = { 0.01f, 0.05f, 0.1f };
-	std::vector<int> bezierStripsSegmentShape2    = { 1, 1, 1 };
-	std::vector<int> bezierStripsSegmentSubdivs2  = { 1, 4, 0 }; // last element is pointless
-
-	bezierStrips.AddBezierStrip(bezierStripsPoints1, bezierStripsNormals1, bezierStripsTangents1, bezierStripsTexcoord1, bezierStripsWidths1, bezierStripsThickness1, bezierStripsSegmentShape1, bezierStripsSegmentSubdivs1);
-	bezierStrips.AddBezierStrip(bezierStripsPoints2, bezierStripsNormals2, bezierStripsTangents2, bezierStripsTexcoord2, bezierStripsWidths2, bezierStripsThickness2, bezierStripsSegmentShape2, bezierStripsSegmentSubdivs2);
-	bezierStrips.SendToGPU();
-
-	GLMesh::LoadCurves(curvesFolder / "longhair.json", bezierStrips);
-	fileListener.Bind(L"longhair.json", [&bezierStrips](fs::path filePath) -> void 
+	GLBezierStrips longHairMesh;
+	GLMesh::LoadCurves(curvesFolder / "longhair.json", longHairMesh);
+	fileListener.Bind(L"longhair.json", [&longHairMesh](fs::path filePath) -> void 
 		{
-			GLMesh::LoadCurves(filePath, bezierStrips);
-			bezierStrips.SendToGPU();
+			GLMesh::LoadCurves(filePath, longHairMesh);
+			longHairMesh.SendToGPU();
 		}
 	);
 
@@ -208,13 +184,13 @@ printf(R"(
 	*/
 	GLTriangleMesh bunnymesh, malemesh, femalemesh;
 	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
-	GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
+	//GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
 	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
 
 	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
 	femalemesh.transform.scale = glm::vec3(0.0125f);
-	bezierStrips.transform.position = femalemesh.transform.position;
-	bezierStrips.transform.scale = femalemesh.transform.scale;
+	longHairMesh.transform.position = femalemesh.transform.position;
+	longHairMesh.transform.scale = femalemesh.transform.scale;
 
 	/*
 		Coordinate Axis Lines
@@ -353,8 +329,8 @@ printf(R"(
 		hair_color.UseForDrawing(0);
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
-		hairShader.SetUniformMat4("model", bezierStrips.transform.ModelMatrix());
-		bezierStrips.Draw();
+		hairShader.SetUniformMat4("model", longHairMesh.transform.ModelMatrix());
+		longHairMesh.Draw();
 
 		// Grid
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -371,8 +347,8 @@ printf(R"(
 		{
 			// Guide lines
 			bezierLinesShader.Use();
-			bezierLinesShader.SetUniformMat4("model", bezierStrips.transform.ModelMatrix());
-			bezierStrips.Draw();
+			bezierLinesShader.SetUniformMat4("model", longHairMesh.transform.ModelMatrix());
+			longHairMesh.Draw();
 
 			hierarchyAxisLines.Clear();
 			MeshTransform a;

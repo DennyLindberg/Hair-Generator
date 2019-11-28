@@ -65,4 +65,5 @@ void main()
     vec4 colorSample = texture(colorSampler, texCoord);
     vec4 idSample = texture(idSampler, texCoord);
     color = PhongLight() * colorSample;
+    //color = vec4(fragment.normal, 1.0f);
 }

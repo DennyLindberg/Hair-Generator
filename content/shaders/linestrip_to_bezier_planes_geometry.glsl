@@ -48,6 +48,22 @@ struct SegmentData
     vec3 endTexcoord;   // uend1, vend, uend2
 };
 
+struct PointData
+{
+    vec4 position;
+    vec4 position_ws;
+    vec3 normal;
+    vec2 texcoord;
+};
+
+struct QuadData
+{
+    PointData p1;
+    PointData p2;
+    PointData p3;
+    PointData p4;
+};
+
 vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
 {
     vec3 sub1 = mix(p1, p2, t);
@@ -70,6 +86,8 @@ bool ShouldFlipTriangle(vec3 start, vec3 end, vec3 topright, vec3 topleft)
 // bottomleft, bottomright, topright, topleft, bottomleft_worldspace, ...., normal1, normal2, texcoord1, texcoord2, FlipTriangleSplit
 void EmitQuad(vec4 bl, vec4 br, vec4 tr, vec4 tl, vec4 bl_ws, vec4 br_ws, vec4 tr_ws, vec4 tl_ws, vec3 n1, vec3 n2, vec3 t1, vec3 t2, bool bFlip)
 {
+    bFlip = false;
+
     // Triangle 1
     gl_Position = bl;
     vertex.normal = n1;
@@ -113,31 +131,173 @@ void EmitQuad(vec4 bl, vec4 br, vec4 tr, vec4 tl, vec4 bl_ws, vec4 br_ws, vec4 t
     EndPrimitive();
 }
 
+void EmitPointData(PointData p)
+{
+    gl_Position = p.position;
+    vertex.normal = p.normal;
+    vertex.position = p.position_ws.xyz;
+    vertex.color = p.position_ws;
+    vertex.tcoord = vec4(p.texcoord.r, p.texcoord.g, 0.0f, 1.0f);
+    EmitVertex();
+}
+
+void EmitTriangle(PointData p1, PointData p2, PointData p3)
+{
+    EmitPointData(p1);
+    EmitPointData(p2);
+    EmitPointData(p3);
+    EndPrimitive();
+}
+
 void GenerateSingleQuad(SegmentData data)
 {
-    vec3 bottomleft  = data.start + data.startWidthVector;
-    vec3 bottomright = data.start - data.startWidthVector;
-    vec3 topright    = data.end   - data.endWidthVector;
-    vec3 topleft     = data.end   + data.endWidthVector;
-   
-    // world space
-    vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
-    vec4 bottomrightws = model * vec4(bottomright, 1.0f);
-    vec4 toprightws = model * vec4(topright, 1.0f);
-    vec4 topleftws = model * vec4(topleft, 1.0f);
+    /*
+        p4 --- end --- p3
+                      / |
+                   /    |
+                /       |
+             /          |
+          /             |
+        p1 ---start--- p2
+    */
 
-    // clip space
+    PointData p1;
+    PointData p2;
+    PointData p3;
+    PointData p4;
+
+    p1.normal = data.startNormal;
+    p2.normal = data.startNormal;
+    p3.normal = data.endNormal;
+    p4.normal = data.endNormal;
+
+    // texcoord.rgb = (ustart, v, uend)
+    p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
+    p2.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
+    p3.texcoord = vec2(data.endTexcoord.b, data.endTexcoord.g);
+    p4.texcoord = vec2(data.endTexcoord.r, data.endTexcoord.g);
+
+    // Localspace
+    p1.position = vec4(data.start + data.startWidthVector, 1.0f);
+    p2.position = vec4(data.start - data.startWidthVector, 1.0f);
+    p3.position = vec4(data.end   - data.endWidthVector, 1.0f);
+    p4.position = vec4(data.end   + data.endWidthVector, 1.0f);
+    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, p3.position.xyz, p4.position.xyz);
+    
+    // Compute world space
+    // width vector points "left" to p1 and p4
+    p1.position_ws = model * p1.position;
+    p2.position_ws = model * p2.position;
+    p3.position_ws = model * p3.position;
+    p4.position_ws = model * p4.position;
+
+    // Project into clip space
     mat4 vp = projection * view;
-    vec4 bottomleftt = vp * bottomleftws;
-    vec4 bottomrightt = vp * bottomrightws;
-    vec4 toprightt = vp * toprightws;
-    vec4 topleftt = vp * topleftws;
-
-    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topright, topleft);
-    EmitQuad(bottomleftt, bottomrightt, toprightt, topleftt, bottomleftws, bottomrightws, toprightws, topleftws, data.startNormal, data.endNormal, data.startTexcoord, data.endTexcoord, bFlipTriangle);
+    p1.position = vp * p1.position_ws;
+    p2.position = vp * p2.position_ws;
+    p3.position = vp * p3.position_ws;
+    p4.position = vp * p4.position_ws;
+    
+    if (bFlipTriangle)
+    {
+        EmitTriangle(p1, p2, p4);
+        EmitTriangle(p2, p3, p4);
+    }
+    else
+    {
+        EmitTriangle(p1, p2, p3);
+        EmitTriangle(p3, p4, p1);
+    }
 }
 
 void GenerateDoubleQuad(SegmentData data)
+{
+    /*
+        p6 ----------- p5 ----------- p4
+                      / |            /|
+                   /    |          /  |
+                /       |       /     |
+             /          |    /        |
+          /             | /           |
+        p1 ----------- p2 ---------- p3
+    */
+
+    PointData p1;
+    PointData p2;
+    PointData p3;
+    PointData p4;
+    PointData p5;
+    PointData p6;
+
+    p1.normal = data.startNormal;
+    p2.normal = data.startNormal;
+    p3.normal = data.startNormal;
+    p4.normal = data.endNormal;
+    p5.normal = data.endNormal;
+    p6.normal = data.endNormal;
+
+    // TODO: Apply thickness
+
+    // texcoord.rgb = (ustart, v, uend)
+    p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
+    p2.texcoord = vec2((data.startTexcoord.r+data.startTexcoord.b)/2.0f, data.startTexcoord.g);
+    p3.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
+    p4.texcoord = vec2(data.endTexcoord.b, data.endTexcoord.g);
+    p5.texcoord = vec2((data.endTexcoord.r+data.endTexcoord.b)/2.0f, data.endTexcoord.g);
+    p6.texcoord = vec2(data.endTexcoord.r, data.endTexcoord.g);
+
+    // Localspace
+    p1.position = vec4(data.start + data.startWidthVector, 1.0f);
+    p2.position = vec4(data.start, 1.0f);                           // midpoint
+    p3.position = vec4(data.start - data.startWidthVector, 1.0f);
+    p4.position = vec4(data.end - data.endWidthVector, 1.0f);
+    p5.position = vec4(data.end, 1.0f);                             // midpoint
+    p6.position = vec4(data.end + data.endWidthVector, 1.0f);
+    bool bFlipTriangle1 = ShouldFlipTriangle(((p1.position+p2.position)/2.0).xyz, ((p5.position+p6.position)/2.0).xyz, p5.position.xyz, p6.position.xyz);
+    bool bFlipTriangle2 = ShouldFlipTriangle(((p2.position+p3.position)/2.0).xyz, ((p4.position+p5.position)/2.0).xyz, p4.position.xyz, p5.position.xyz);
+    
+    // Compute world space
+    // width vector points "left" to p1 and p4
+    p1.position_ws = model * p1.position;
+    p2.position_ws = model * p2.position;
+    p3.position_ws = model * p3.position;
+    p4.position_ws = model * p4.position;
+    p5.position_ws = model * p5.position;
+    p6.position_ws = model * p6.position;
+
+    // Project into clip space
+    mat4 vp = projection * view;
+    p1.position = vp * p1.position_ws;
+    p2.position = vp * p2.position_ws;
+    p3.position = vp * p3.position_ws;
+    p4.position = vp * p4.position_ws;
+    p5.position = vp * p5.position_ws;
+    p6.position = vp * p6.position_ws;
+    
+    if (bFlipTriangle1)
+    {
+        EmitTriangle(p1, p2, p6);
+        EmitTriangle(p6, p2, p5);
+    }
+    else
+    {
+        EmitTriangle(p1, p2, p5);
+        EmitTriangle(p5, p6, p1);
+    }
+        
+    if (bFlipTriangle2)
+    {
+        EmitTriangle(p2, p3, p5);
+        EmitTriangle(p5, p3, p4);
+    }
+    else
+    {
+        EmitTriangle(p2, p3, p4);
+        EmitTriangle(p4, p5, p2);
+    }
+}
+
+void GenerateDoubleQuad_depr(SegmentData data)
 {
     // base quad
     vec3 bottomleft  = data.start + data.startWidthVector;
@@ -196,7 +356,7 @@ void GenerateDoubleQuad(SegmentData data)
     EmitQuad(bottommiddlet, bottomrightt, toprightt, topmiddlet, bottommiddlews, bottomrightws, toprightws, topmiddlews, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
 }
 
-void GenerateTrippleQuad(SegmentData data)
+void GenerateTripleQuad(SegmentData data)
 {
     // base quad
     vec3 bottomleft  = data.start + data.startWidthVector;
@@ -278,7 +438,7 @@ void GenerateSegment(SegmentData data)
     {
         case 0: { GenerateSingleQuad(data); break; }
         case 1: { GenerateDoubleQuad(data); break; }
-        case 2: { GenerateTrippleQuad(data); break; }
+        case 2: { GenerateTripleQuad(data); break; }
     }
 }
 

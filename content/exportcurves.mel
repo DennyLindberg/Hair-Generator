@@ -83,11 +83,14 @@ proc FreezeTransformsOnBezierCurve(string $bezierCurveTransform)
     */
     group -em -n "tempatempa";
     string $children[] = `listRelatives -f -c -type transform $bezierCurveTransform`;
-    parent $children "tempatempa";
-    makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1 $bezierCurveTransform;
-    $children = `listRelatives -f -c -type transform "tempatempa"`;
-    parent $children $bezierCurveTransform;
-    delete "tempatempa";
+    if (size($children))
+    {
+        parent $children "tempatempa";
+        makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1 $bezierCurveTransform;
+        $children = `listRelatives -f -c -type transform "tempatempa"`;
+        parent $children $bezierCurveTransform;
+        delete "tempatempa";
+    }
 }
 
 global proc ExportAllCurves()
@@ -156,9 +159,7 @@ global proc ExportAllCurves()
             float $step = $i / 3.0;
             float $progress = $step/$total_steps;
 
-
             // Tripple value entries
-            //float $pos[] = {};
             string $arrow = $transform + "|normal"+($i/3);
             if (`objExists($arrow)`)
             {
@@ -167,23 +168,27 @@ global proc ExportAllCurves()
                 $normals[size($normals)] = $mat[8];
                 $normals[size($normals)] = $mat[9];
                 $normals[size($normals)] = $mat[10];
+
+                $widths[size($widths)] = `getAttr ($arrow+".scaleX")`;
+                $thickness[size($thickness)] = `getAttr ($arrow+".scaleZ")`;
+                $shapes[size($shapes)] = `getAttr ($arrow+".Shape")`;
+                $subdivisions[size($subdivisions)] = `getAttr ($arrow+".Subdivisions")`;
             }
             else
             {
                 $normals[size($normals)] = 1.0;
                 $normals[size($normals)] = 0.0;
                 $normals[size($normals)] = 0.0;
+
+                $widths[size($widths)] = 1.0; // scale x
+                $thickness[size($thickness)] = 0.2; // scale z
+                $shapes[size($shapes)] = 2; // custom attr
+                $subdivisions[size($subdivisions)] = 4; // custom attr
             }
-            //float $tout[] = {};
-            $texcoords[size($texcoords)] = 0.1;
+
+            $texcoords[size($texcoords)] = 0.01;
             $texcoords[size($texcoords)] = 0.01*(1.0 - $progress) + 1.0 * $progress;
             $texcoords[size($texcoords)] = 0.2;
-            
-            // Single value entries
-            $widths[size($widths)] = 1.0;
-            $thickness[size($thickness)] = 0.2;
-            $shapes[size($shapes)] = 2;
-            $subdivisions[size($subdivisions)] = 4;
         }
 
         /*
