@@ -171,7 +171,7 @@ void GenerateSingleQuad(SegmentData data)
     p3.normal = data.endNormal;
     p4.normal = data.endNormal;
 
-    // texcoord.rgb = (ustart, v, uend)
+    // texcoord.rgb = (r=ustart, g=v, b=uend)
     p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
     p2.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
     p3.texcoord = vec2(data.endTexcoord.b, data.endTexcoord.g);
@@ -236,7 +236,7 @@ void GenerateDoubleQuad(SegmentData data)
     p5.normal = data.endNormal;
     p6.normal = data.endNormal;
 
-    // texcoord.rgb = (ustart, v, uend)
+    // texcoord.rgb = (r=ustart, g=v, b=uend)
     p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
     p2.texcoord = vec2((data.startTexcoord.r+data.startTexcoord.b)/2.0f, data.startTexcoord.g);
     p3.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
@@ -307,78 +307,127 @@ void GenerateDoubleQuad(SegmentData data)
 
 void GenerateTripleQuad(SegmentData data)
 {
-    // base quad
-    vec3 bottomleft  = data.start + data.startWidthVector;
-    vec3 bottomright = data.start - data.startWidthVector;
-    vec3 topright    = data.end   - data.endWidthVector;
-    vec3 topleft     = data.end   + data.endWidthVector;
+    /*
+        p8 ----------- p7 ----end---- p6 ---------- p5
+                      / |            /|            /|
+                   /    |          /  |          /  |
+       0.0      /      0.25     /    0.75     /     1.0  (u coordinate)
+             /          |    /        |    /        |
+          /             | /           | /           |
+        p1 ----------- p2 ---start--- p3 ---------- p4
+    */
 
-    // middle split
-    vec3 bottommiddle = (bottomleft+bottomright)/2.0f;
-    vec3 topmiddle = (topleft+topright)/2.0f;
-    vec3 bottommiddlel = (bottommiddle + bottomleft)/2.0f;
-    vec3 bottommiddler = (bottommiddle + bottomright)/2.0f;
-    vec3 topmiddlel = (topmiddle + topleft)/2.0f;
-    vec3 topmiddler = (topmiddle + topright)/2.0f;
+    PointData p1;
+    PointData p2;
+    PointData p3;
+    PointData p4;
+    PointData p5;
+    PointData p6;
+    PointData p7;
+    PointData p8;
 
-    // apply height offset
-    vec3 heightdirection1 = data.startNormal * data.startCurvatureHeight/2.0f;
-    vec3 heightdirection2 = data.endNormal * data.endCurvatureHeight/2.0f;
-    bottomleft -= heightdirection1;
-    bottommiddlel += heightdirection1;
-    bottommiddler += heightdirection1;
-    bottomright -= heightdirection1;
-    topleft -= heightdirection2;
-    topmiddlel += heightdirection2;
-    topmiddler += heightdirection2;
-    topright -= heightdirection2;
+    p1.normal = data.startNormal;
+    p2.normal = data.startNormal;
+    p3.normal = data.startNormal;
+    p4.normal = data.startNormal;
+    p5.normal = data.endNormal;
+    p6.normal = data.endNormal;
+    p7.normal = data.endNormal;
+    p8.normal = data.endNormal;
 
-    // world space
-    vec4 bottomleftws = model * vec4(bottomleft, 1.0f);
-    vec4 bottommiddlelws = model * vec4(bottommiddlel, 1.0f);
-    vec4 bottommiddlerws = model * vec4(bottommiddler, 1.0f);
-    vec4 bottomrightws = model * vec4(bottomright, 1.0f);
+    // texcoord.rgb = (r=ustart, g=v, b=uend)
+    // Set corners and mix later
+    p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
+    p4.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
+    p8.texcoord = vec2(data.endTexcoord.r, data.endTexcoord.g);
+    p5.texcoord = vec2(data.endTexcoord.b, data.endTexcoord.g);
+    // Mix inbetweens
+    p2.texcoord = mix(p1.texcoord, p4.texcoord, 0.25f);
+    p3.texcoord = mix(p1.texcoord, p4.texcoord, 0.75f);
+    p7.texcoord = mix(p8.texcoord, p5.texcoord, 0.25f);
+    p6.texcoord = mix(p8.texcoord, p5.texcoord, 0.75f);
 
-    vec4 topleftws = model * vec4(topleft, 1.0f);
-    vec4 topmiddlelws = model * vec4(topmiddlel, 1.0f);
-    vec4 topmiddlerws = model * vec4(topmiddler, 1.0f);
-    vec4 toprightws = model * vec4(topright, 1.0f);
+    // Localspace
+    // Set corners and mix later (same as with UVs)
+    p1.position = vec4(data.start + data.startWidthVector, 1.0f);
+    p4.position = vec4(data.start - data.startWidthVector, 1.0f);
+    p8.position = vec4(data.end + data.endWidthVector, 1.0f) ;
+    p5.position = vec4(data.end - data.endWidthVector, 1.0f);
+    // Mix inbetweens
+    p2.position = mix(p1.position, p4.position, 0.25f);
+    p3.position = mix(p1.position, p4.position, 0.75f);
+    p7.position = mix(p8.position, p5.position, 0.25f);
+    p6.position = mix(p8.position, p5.position, 0.75f);
+    bool bFlipTriangle1 = ShouldFlipTriangle(((p1.position+p2.position)/2.0).xyz, ((p8.position+p7.position)/2.0).xyz, p7.position.xyz, p8.position.xyz);
+    bool bFlipTriangle2 = ShouldFlipTriangle(data.start, data.end, p6.position.xyz, p7.position.xyz);
+    bool bFlipTriangle3 = ShouldFlipTriangle(((p3.position+p4.position)/2.0).xyz, ((p6.position+p5.position)/2.0).xyz, p5.position.xyz, p6.position.xyz);
 
-    // clip space
+    // Apply thickness
+    vec4 startThicknessOffset = vec4(data.startNormal * data.startCurvatureHeight / 2.0f, 0.0f);
+    vec4 endThicknessOffset = vec4(data.endNormal * data.endCurvatureHeight / 2.0f, 0.0f);
+    p1.position -= startThicknessOffset;
+    p2.position += startThicknessOffset;
+    p3.position += startThicknessOffset;
+    p4.position -= startThicknessOffset;
+    p5.position -= endThicknessOffset;
+    p6.position += endThicknessOffset;
+    p7.position += endThicknessOffset;
+    p8.position -= endThicknessOffset;
+    
+    // Compute world space
+    // width vector points "left" to p1 and p4
+    p1.position_ws = model * p1.position;
+    p2.position_ws = model * p2.position;
+    p3.position_ws = model * p3.position;
+    p4.position_ws = model * p4.position;
+    p5.position_ws = model * p5.position;
+    p6.position_ws = model * p6.position;
+    p7.position_ws = model * p7.position;
+    p8.position_ws = model * p8.position;
+
+    // Project into clip space
     mat4 vp = projection * view;
-    vec4 bottomleftt = vp * bottomleftws;
-    vec4 bottommiddlelt = vp * bottommiddlelws;
-    vec4 bottommiddlert = vp * bottommiddlerws;
-    vec4 bottomrightt = vp * bottomrightws;
+    p1.position = vp * p1.position_ws;
+    p2.position = vp * p2.position_ws;
+    p3.position = vp * p3.position_ws;
+    p4.position = vp * p4.position_ws;
+    p5.position = vp * p5.position_ws;
+    p6.position = vp * p6.position_ws;
+    p7.position = vp * p7.position_ws;
+    p8.position = vp * p8.position_ws;
+    
+    if (bFlipTriangle1)
+    {
+        EmitTriangle(p1, p2, p8);
+        EmitTriangle(p8, p2, p7);
+    }
+    else
+    {
+        EmitTriangle(p1, p2, p7);
+        EmitTriangle(p7, p8, p1);
+    }
+        
+    if (bFlipTriangle2)
+    {
+        EmitTriangle(p2, p3, p7);
+        EmitTriangle(p7, p3, p6);
+    }
+    else
+    {
+        EmitTriangle(p2, p3, p6);
+        EmitTriangle(p6, p7, p2);
+    }
 
-    vec4 topleftt = vp * topleftws;
-    vec4 topmiddlelt = vp * topmiddlelws;
-    vec4 topmiddlert = vp * topmiddlerws;
-    vec4 toprightt = vp * toprightws;
-
-    // Quad 1
-    vec3 texcoordmid1 = data.startTexcoord;
-    vec3 texcoordmid2 = data.endTexcoord;
-    texcoordmid1.r = mix(texcoordmid1.b, texcoordmid1.r, 0.25f);
-    texcoordmid2.r = mix(texcoordmid2.b, texcoordmid2.r, 0.25f);
-    bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
-    EmitQuad(bottomleftt, bottommiddlelt, topmiddlelt, topleftt, bottomleftws, bottommiddlelws, topmiddlelws, topleftws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
-
-    // Quad 2
-    texcoordmid1.b = texcoordmid1.r;
-    texcoordmid2.b = texcoordmid2.r;
-    texcoordmid1.r = mix(data.startTexcoord.b, data.startTexcoord.r, 0.75f);
-    texcoordmid2.r = mix(data.endTexcoord.b, data.endTexcoord.r, 0.75f);
-    bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
-    EmitQuad(bottommiddlelt, bottommiddlert, topmiddlert, topmiddlelt, bottommiddlelws, bottommiddlerws, topmiddlerws, topmiddlelws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
-
-    // Quad 3
-    texcoordmid1.b = texcoordmid1.r;
-    texcoordmid2.b = texcoordmid2.r;
-    texcoordmid1.r = data.startTexcoord.r;
-    texcoordmid2.r = data.endTexcoord.r;
-    bFlipTriangle = ShouldFlipTriangle(data.start, data.end, topmiddlel, topleft);
-    EmitQuad(bottommiddlert, bottomrightt, toprightt, topmiddlert, bottommiddlerws, bottomrightws, toprightws, topmiddlerws, data.startNormal, data.endNormal, texcoordmid1, texcoordmid2, bFlipTriangle);
+    if (bFlipTriangle3)
+    {
+        EmitTriangle(p3, p4, p6);
+        EmitTriangle(p6, p4, p5);
+    }
+    else
+    {
+        EmitTriangle(p3, p4, p5);
+        EmitTriangle(p5, p6, p3);
+    }
 }
 
 void GenerateSegment(SegmentData data)
