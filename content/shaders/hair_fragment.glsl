@@ -57,7 +57,7 @@ void main()
 
     // Masked discard
     vec4 alphaSample = texture(alphaSampler, texCoord);
-    if (alphaSample.r < 0.95f)
+    if (alphaSample.r < 0.5f)
     {
         discard;
     }

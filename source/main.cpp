@@ -184,7 +184,7 @@ printf(R"(
 	*/
 	GLTriangleMesh bunnymesh, malemesh, femalemesh;
 	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
-	//GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
+	GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
 	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
 
 	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);

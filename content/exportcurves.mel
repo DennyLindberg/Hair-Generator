@@ -102,6 +102,11 @@ global proc ExportAllCurves()
     int $curvecount = 0;
     for ($transform in $allTransforms)
     {
+        if (!`objExists $transform` || `getAttr ($transform + ".visibility")` == 0)
+        {
+            continue;
+        }
+
         // Get bezier curve (apply any transforms it might have)
         string $beziershapes[] = `listRelatives -s $transform`;
         if (size($beziershapes) == 0 || `gmatch $beziershapes[0] "*normal*"`)
