@@ -10,9 +10,13 @@ layout (std140, binding = 1) uniform Camera
 };
 uniform mat4 model;
 uniform bool bRenderHairFlat = false;
+uniform bool bDrawDebugNormals = false;
 uniform vec3 unifiedNormalsCapsuleStart = vec3(0.0f, 0.0f, 0.05f);
 uniform vec3 unifiedNormalsCapsuleEnd = vec3(0.0f, 0.3f, 0.05f);
+uniform vec3 darkColor = vec3(33.0f/255.0f, 17.0f/255.0f, 4.0f/255.0f);
+uniform vec3 lightColor = vec3(145.0f/255.0f, 123.0f/255.0f, 104.0f/255.0f)*0.7;
 uniform float normalBlend = 0.9f;
+uniform float maskCutoff = 0.25f;
 
 layout (std140, binding = 2) uniform Light
 {
@@ -90,18 +94,21 @@ void main()
 
     // Masked discard
     vec4 alphaSample = texture(alphaSampler, texCoord);
-    if (alphaSample.r < 0.25f)
+    if (alphaSample.r < maskCutoff)
     {
         discard;
     }
     
-    vec3 baseColor = vec3(33.0f/255.0f, 17.0f/255.0f, 4.0f/255.0f);
-    vec3 stripeColor = vec3(145.0f/255.0f, 123.0f/255.0f, 104.0f/255.0f)*0.7;
-
     float colorBlend = bRenderHairFlat? 0.5f : texture(colorSampler, texCoord).r;
-    vec4 colorSample = vec4(mix(baseColor, stripeColor, colorBlend), 1.0f);
+    vec4 colorSample = vec4(mix(darkColor, lightColor, colorBlend), 1.0f);
     vec4 idSample = texture(idSampler, texCoord);
-    color = PhongLight() * colorSample;
-    //vec3 normal = GetUnifiedNormal(fragment.position);
-    //color = vec4(normal, 1.0f);
+
+    if (bDrawDebugNormals)
+    {
+        color = vec4(GetUnifiedNormal(fragment.position), 1.0f);
+    }
+    else
+    {
+        color = PhongLight() * colorSample;
+    }
 }

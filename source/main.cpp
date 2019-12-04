@@ -215,6 +215,13 @@ printf(R"(
 	bool renderTransformHierarchy = false;
 	bool lightFollowsCamera = false;
 	bool renderHairFlat = false;
+	bool drawDebugNormals = false;
+	float hairUnifiedNormalBlend = 0.9f;
+	float hairMaskCutoff = 0.25f;
+	glm::fvec3 unifiedNormalsCapsuleStart = glm::fvec3(0.0f, 0.0f, 0.05f);
+	glm::fvec3 unifiedNormalsCapsuleEnd = glm::fvec3(0.0f, 0.3f, 0.05f);
+	glm::fvec3 hairDarkColor = glm::fvec3(33.0f/255.0f, 17.0f/255.0f, 4.0f/255.0f);
+	glm::fvec3 hairLightColor = glm::fvec3(145.0f/255.0f, 123.0f/255.0f, 104.0f/255.0f)*0.7f;
 
 	/*
 		Main application loop
@@ -262,22 +269,8 @@ printf(R"(
 			{
 				auto key = event.key.keysym.sym;
 
-				if		(key == SDLK_4) renderWireframe = true;
-				else if (key == SDLK_5) renderWireframe = false;
-				else if (key == SDLK_6) renderTransformHierarchy = !renderTransformHierarchy;
-				else if (key == SDLK_7) lightFollowsCamera = !lightFollowsCamera;
-				else if (key == SDLK_8) renderHairFlat = !renderHairFlat;
-				else if (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
+				if      (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
 				else if (key == SDLK_f) turntable.SnapToOrigin();
-
-				switch (key)
-				{
-				case SDLK_g:case SDLK_t:case SDLK_UP:case SDLK_DOWN:case SDLK_LEFT:case SDLK_RIGHT:
-				{
-					//GenerateRandomTree(treeStyle, treeIterations, treeSubdivisions);
-				}
-				default: { break; }
-				}
 			}
 			else if (event.type == SDL_MOUSEBUTTONDOWN)
 			{
@@ -342,9 +335,13 @@ printf(R"(
 		hair_id.UseForDrawing(2);
 		hairShader.SetUniformMat4("model", longHairMesh.transform.ModelMatrix());
 		hairShader.SetUniformInt("bRenderHairFlat", renderHairFlat);
-		hairShader.SetUniformVec3("unifiedNormalsCapsuleStart", glm::fvec3(0.0f, 0.0f, 0.05f));
-		hairShader.SetUniformVec3("unifiedNormalsCapsuleEnd", glm::fvec3(0.0f, 0.3f, 0.05f));
-		hairShader.SetUniformFloat("normalBlend", 0.9f);
+		hairShader.SetUniformInt("bDrawDebugNormals", drawDebugNormals);
+		hairShader.SetUniformVec3("unifiedNormalsCapsuleStart", unifiedNormalsCapsuleStart);
+		hairShader.SetUniformVec3("unifiedNormalsCapsuleEnd", unifiedNormalsCapsuleEnd);
+		hairShader.SetUniformVec3("darkColor", hairDarkColor);
+		hairShader.SetUniformVec3("lightColor", hairLightColor);
+		hairShader.SetUniformFloat("normalBlend", hairUnifiedNormalBlend);
+		hairShader.SetUniformFloat("maskCutoff", hairMaskCutoff);
 		longHairMesh.Draw();
 
 		// Grid
@@ -384,10 +381,28 @@ printf(R"(
 			hierarchyAxisLines.Draw();
 		}
 
-		window.OnImguiUpdate([]() -> void
+		window.OnImguiUpdate([&]() -> void
 		{
-			bool showDemoWindow = true;
-			ImGui::ShowDemoWindow(&showDemoWindow);
+			ImGui::SetNextWindowSize(ImVec2(WINDOW_WIDTH*0.25f, WINDOW_HEIGHT));
+			ImGui::SetNextWindowPos(ImVec2(0,0));
+			ImGui::Begin("Settings");    
+			{
+				ImGui::Text("Scene");
+				ImGui::Checkbox("Wireframe", &renderWireframe);
+				ImGui::Checkbox("Light follows camera", &lightFollowsCamera);
+				ImGui::Text("Hair");
+				ImGui::ColorEdit3("Dark Color", (float*)&hairDarkColor);
+				ImGui::ColorEdit3("Light Color", (float*)&hairLightColor);
+				ImGui::SliderFloat("Mask cutoff", (float*)&hairMaskCutoff, 0.0f, 1.0f);
+				ImGui::Checkbox("Debug splines", &renderTransformHierarchy);
+				ImGui::Checkbox("Flat color", &renderHairFlat);
+				ImGui::Text("Hair Normals Capsule");
+				ImGui::SliderFloat3("Top", (float*)&unifiedNormalsCapsuleEnd, 0.0f, 0.5f);
+				ImGui::SliderFloat3("Bottom", (float*)&unifiedNormalsCapsuleStart, 0.0f, 0.5f);
+				ImGui::SliderFloat("Amount", &hairUnifiedNormalBlend, 0.0f, 1.0f);
+				ImGui::Checkbox("Draw debug normals", &drawDebugNormals);
+			}
+			ImGui::End();
 		}
 		);
 
