@@ -182,6 +182,24 @@ GLuint GLProgram::Id()
 	return programId;
 }
 
+void GLProgram::SetUniformInt(std::string name, int value)
+{
+	if (intUniforms.count(name) == 0)
+	{
+		intUniforms[name] = {
+			glGetUniformLocation(programId, name.c_str()),
+			value
+		};
+		intUniforms[name].Upload();
+	}
+	else
+	{
+		auto& u = intUniforms[name];
+		u.value = value;
+		u.Upload();
+	}
+}
+
 void GLProgram::SetUniformFloat(std::string name, float value)
 {
 	if (floatUniforms.count(name) == 0)
@@ -257,6 +275,12 @@ void GLProgram::SetUniformMat4(std::string name, glm::mat4 value)
 void GLProgram::ReloadUniforms()
 {
 	Use();
+
+	for (auto& u : intUniforms)
+	{
+		u.second.id = glGetUniformLocation(programId, u.first.c_str());
+		u.second.Upload();
+	}
 
 	for (auto& u : floatUniforms)
 	{

@@ -84,6 +84,7 @@ printf(R"(
 
         6:         Toggle display of skeleton
         7:         Toggle light follow camera
+        8:         Toggle hair flat
 			       
         S:         Take screenshot
 			       
@@ -213,6 +214,7 @@ printf(R"(
 	bool renderWireframe = false;
 	bool renderTransformHierarchy = false;
 	bool lightFollowsCamera = false;
+	bool renderHairFlat = false;
 
 	/*
 		Main application loop
@@ -262,6 +264,7 @@ printf(R"(
 				else if (key == SDLK_5) renderWireframe = false;
 				else if (key == SDLK_6) renderTransformHierarchy = !renderTransformHierarchy;
 				else if (key == SDLK_7) lightFollowsCamera = !lightFollowsCamera;
+				else if (key == SDLK_8) renderHairFlat = !renderHairFlat;
 				else if (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
 				else if (key == SDLK_f) turntable.SnapToOrigin();
 
@@ -336,6 +339,7 @@ printf(R"(
 		hair_alpha.UseForDrawing(1);
 		hair_id.UseForDrawing(2);
 		hairShader.SetUniformMat4("model", longHairMesh.transform.ModelMatrix());
+		hairShader.SetUniformInt("bRenderHairFlat", renderHairFlat);
 		longHairMesh.Draw();
 
 		// Grid

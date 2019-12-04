@@ -9,6 +9,7 @@ layout (std140, binding = 1) uniform Camera
     vec3 camera_position;  // 128
 };
 uniform mat4 model;
+uniform bool bRenderHairFlat = false;
 
 layout (std140, binding = 2) uniform Light
 {
@@ -62,7 +63,7 @@ void main()
         discard;
     }
 
-    vec4 colorSample = texture(colorSampler, texCoord);
+    vec4 colorSample = bRenderHairFlat? vec4(0.5f, 0.5f, 0.5f, 1.0f) : texture(colorSampler, texCoord);
     vec4 idSample = texture(idSampler, texCoord);
     color = PhongLight() * colorSample;
     //color = vec4(fragment.normal, 1.0f);

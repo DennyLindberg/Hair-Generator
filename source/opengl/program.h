@@ -4,6 +4,17 @@
 #include "glad/glad.h"
 #include "../core/math.h"
 
+struct UniformInt
+{
+	GLint id = 0;
+	GLint value = 0;
+
+	void Upload()
+	{
+		glUniform1i(id, value);
+	}
+};
+
 struct UniformFloat
 {
 	GLint id = 0;
@@ -88,6 +99,7 @@ protected:
 	GLint fragment_shader_id = 0;
 	GLint geometry_shader_id = -1; // optional
 
+	std::map<std::string, UniformInt> intUniforms;
 	std::map<std::string, UniformFloat> floatUniforms;
 	std::map<std::string, UniformVec3> vec3Uniforms;
 	std::map<std::string, UniformVec4> vec4Uniforms;
@@ -105,6 +117,7 @@ public:
 	void CompileAndLink();
 	void Use();
 	GLuint Id();
+	void SetUniformInt(std::string name, int value);
 	void SetUniformFloat(std::string name, float value);
 	void SetUniformVec3(std::string name, glm::fvec3 value);
 	void SetUniformVec4(std::string name, glm::fvec4 value);
