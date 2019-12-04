@@ -340,6 +340,9 @@ printf(R"(
 		hair_id.UseForDrawing(2);
 		hairShader.SetUniformMat4("model", longHairMesh.transform.ModelMatrix());
 		hairShader.SetUniformInt("bRenderHairFlat", renderHairFlat);
+		hairShader.SetUniformVec3("unifiedNormalsCapsuleStart", glm::fvec3(0.0f, 0.0f, 0.05f));
+		hairShader.SetUniformVec3("unifiedNormalsCapsuleEnd", glm::fvec3(0.0f, 0.3f, 0.05f));
+		hairShader.SetUniformFloat("normalBlend", 0.9);
 		longHairMesh.Draw();
 
 		// Grid
