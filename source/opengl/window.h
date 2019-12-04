@@ -4,6 +4,8 @@
 #undef main
 
 #include <string>
+#include <functional>
+#include "../thirdparty/imgui.h"
 
 class OpenGLWindow
 {
@@ -21,6 +23,17 @@ public:
 	void SwapFramebuffer();
 	void SetClearColor(float r, float g, float b, float a);
 	void Clear();
+
+	void HandleImguiEvent(const SDL_Event* event);
+	void NewImguiFrame();
+	void RenderImguiFrame();
+
+	void OnImguiUpdate(std::function<void()> callback)
+	{
+		NewImguiFrame();
+		callback();
+		RenderImguiFrame();
+	}
 
 protected:
 	void Initialize(int width, int height, bool fullscreenEnabled, bool vsync);

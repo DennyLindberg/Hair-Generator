@@ -251,6 +251,8 @@ printf(R"(
 			quit = (event.type == SDL_QUIT) || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE);
 			if (quit) break;
 
+			window.HandleImguiEvent(&event);
+
 			SDL_Keymod mod = SDL_GetModState();
 			bool bCtrlModifier = mod & KMOD_CTRL;
 			bool bShiftModifier = mod & KMOD_SHIFT;
@@ -342,7 +344,7 @@ printf(R"(
 		hairShader.SetUniformInt("bRenderHairFlat", renderHairFlat);
 		hairShader.SetUniformVec3("unifiedNormalsCapsuleStart", glm::fvec3(0.0f, 0.0f, 0.05f));
 		hairShader.SetUniformVec3("unifiedNormalsCapsuleEnd", glm::fvec3(0.0f, 0.3f, 0.05f));
-		hairShader.SetUniformFloat("normalBlend", 0.9);
+		hairShader.SetUniformFloat("normalBlend", 0.9f);
 		longHairMesh.Draw();
 
 		// Grid
@@ -381,6 +383,13 @@ printf(R"(
 
 			hierarchyAxisLines.Draw();
 		}
+
+		window.OnImguiUpdate([]() -> void
+		{
+			bool showDemoWindow = true;
+			ImGui::ShowDemoWindow(&showDemoWindow);
+		}
+		);
 
 		// Done
 		window.SwapFramebuffer();
