@@ -83,6 +83,7 @@ printf(R"(
         5:         Display textured surfaces
 
         6:         Toggle display of skeleton
+        7:         Toggle light follow camera
 			       
         S:         Take screenshot
 			       
@@ -211,6 +212,7 @@ printf(R"(
 	*/
 	bool renderWireframe = false;
 	bool renderTransformHierarchy = false;
+	bool lightFollowsCamera = false;
 
 	/*
 		Main application loop
@@ -259,6 +261,7 @@ printf(R"(
 				if		(key == SDLK_4) renderWireframe = true;
 				else if (key == SDLK_5) renderWireframe = false;
 				else if (key == SDLK_6) renderTransformHierarchy = !renderTransformHierarchy;
+				else if (key == SDLK_7) lightFollowsCamera = !lightFollowsCamera;
 				else if (key == SDLK_s) TakeScreenshot("screenshot.png", WINDOW_WIDTH, WINDOW_HEIGHT);
 				else if (key == SDLK_f) turntable.SnapToOrigin();
 
@@ -316,6 +319,9 @@ printf(R"(
 		CameraUBO.SetData(glm::value_ptr(projectionmatrix), 0, 64);
 		CameraUBO.SetData(glm::value_ptr(viewmatrix), 64, 64);
 		CameraUBO.SetData(glm::value_ptr(camera.GetPosition()), 128, 16);
+
+		// Update light
+		LightUBO.SetData(glm::value_ptr(lightFollowsCamera? camera.GetPosition() : lightPosition), 0, 12);
 
 		// Render mesh
 		phongShader.Use();
