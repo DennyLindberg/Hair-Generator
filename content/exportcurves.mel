@@ -93,6 +93,29 @@ proc FreezeTransformsOnBezierCurve(string $bezierCurveTransform)
     }
 }
 
+// return an array with distance values for each control points. (each distance is the length of the curve from u[0] to u[i])
+global proc float[] DistancesAlongCurve(string $curve)
+{ 
+    float $lengths[] = {}; 
+    if (!`objExists $curve`)
+    {
+        return $lengths;
+    }
+    
+    int $spans = `getAttr ($curve + ".spans")`;
+    int $degree = `getAttr ($curve + ".degree")`;
+    int $numpoints = ($spans+$degree+2)/3;
+     
+    string $arclengthnode = `arcLengthDimension ($curve + ".u[0]")`;
+    for ($i=0; $i<$numpoints; $i++)
+    {
+        setAttr ($arclengthnode + ".uParamValue") $i;
+        $lengths[size($lengths)] = `getAttr ($arclengthnode + ".al")`;
+    }
+    delete `listRelatives -p $arclengthnode`;       
+    return $lengths;
+}
+
 global proc ExportAllCurves()
 {
     string $selection[] = `ls -sl`;
@@ -123,6 +146,8 @@ global proc ExportAllCurves()
         
         // Extract positions and outward going tangents
         float $values[] = `getAttr ($beziercurve + ".cv[*]")`;
+        float $distances[] = DistancesAlongCurve($beziercurve);
+        float $maxdistance = $distances[size($distances)-1];
 
         // Output values
         float $pos[] = GetControlPoints($values);
@@ -158,11 +183,10 @@ global proc ExportAllCurves()
             }            
         }
         
-        int $total_steps = size($pos)/3-1;
         for ($i=0; $i<size($pos); $i += 3)
         {
-            float $step = $i / 3.0;
-            float $progress = $step/$total_steps;
+            int $step = $i / 3;
+            float $progress = $distances[$step]/$maxdistance;
 
             // Tripple value entries
             string $arrow = $transform + "|normal"+($i/3);
