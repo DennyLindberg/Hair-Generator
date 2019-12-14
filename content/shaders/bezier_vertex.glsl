@@ -9,6 +9,9 @@ layout(location = 5) in float vertexThickness;
 layout(location = 6) in int vertexSegmentShape;
 layout(location = 7) in int vertexSegmentSubdivisions;
 
+uniform int shapeOverride = -1;
+uniform int subdivisionsOverride = -1;
+
 out CPAttrib
 {
     vec3 normal;
@@ -30,6 +33,6 @@ void main()
     controlpoint.texcoord = vertexTexcoord;
     controlpoint.width = vertexWidth;
     controlpoint.thickness = vertexThickness;
-    controlpoint.shape = vertexSegmentShape;
-    controlpoint.subdivisions = vertexSegmentSubdivisions;
+    controlpoint.shape = (shapeOverride >= 0)? shapeOverride : vertexSegmentShape;
+    controlpoint.subdivisions = (subdivisionsOverride >= 0)? subdivisionsOverride : vertexSegmentSubdivisions;
 }
