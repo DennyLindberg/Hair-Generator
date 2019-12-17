@@ -1,12 +1,24 @@
 # Hair generation using geometry shaders
 
-Created by Denny Lindberg for the course TSBK03: Advanced Game Programming.
+Created by Denny Lindberg for the course TSBK03: Advanced Game Programming. This was a project for generating hair planes from curve data with Geometry Shaders. Curves are designed in Maya and then exported as a text file. It is then loaded inside the application.
+
+**Result**
+<p align="center"><img src="preview_result.jpg"></p>
+
+**Input Bezier Curves**
+<p align="center"><img src="preview_curves.jpg"></p>
+
+**Typical surface normals**
+<p align="center"><img src="preview_bent_normals_off.jpg"></p>
+
+**Bent normals enabled (for a unified softer appearance)**
+<p align="center"><img src="preview_bent_normals_on.jpg"></p>
 
 # Features
 
 - C++17
 - For Windows (Visual Studio 2019)
-- OpenGL 4.0
+- OpenGL 4.6
 
 # Building the code
 
@@ -16,9 +28,7 @@ After downloading the executable, place it in the root folder. Run `premake5 vs2
 
 # Third party content used
 
-**The Stanford 3D Scanning Repositoriy** - Meshes such as the Stanford Bunny - http://www-graphics.stanford.edu/data/3Dscanrep/3Dscanrep.html
-
-**Morgan McGuire, Computer Graphics Archive, July 2017** - Meshes such as the LPS Head - https://casual-effects.com/data/index.html
+**Sparrow from Paragon by Epic Games** - Borrowed the head mesh and hair textures for testing.
 
 # Third party libraries used
 
@@ -32,17 +42,18 @@ After downloading the executable, place it in the root folder. Run `premake5 vs2
 
 **tinyobjloader** for loading obj files - https://github.com/syoyo/tinyobjloader
 
+**Dear ImGUI** for the UI - https://github.com/ocornut/imgui
+
 # Algorithms copied or referenced
 **Various GLSL noise algorithms** - Copied: https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 
 **Evan's grid shader** - Slightly modified: http://madebyevan.com/shaders/grid/
 
-
 ## Folder structure
 
 **binaries/** - contains compiled executable, dlls, images, configs or audio. (screenshots end up here)
 
-**content/** - shader files.
+**content/** - mesh, curves, textures and shader files.
 
 **include/** - thirdparty includes.
 
