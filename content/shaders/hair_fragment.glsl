@@ -11,11 +11,8 @@ layout (std140, binding = 1) uniform Camera
 uniform mat4 model;
 uniform bool bRenderHairFlat = false;
 uniform bool bDrawDebugNormals = false;
-uniform vec3 unifiedNormalsCapsuleStart = vec3(0.0f, 0.0f, 0.05f);
-uniform vec3 unifiedNormalsCapsuleEnd = vec3(0.0f, 0.3f, 0.05f);
 uniform vec3 darkColor = vec3(33.0f/255.0f, 17.0f/255.0f, 4.0f/255.0f);
 uniform vec3 lightColor = vec3(145.0f/255.0f, 123.0f/255.0f, 104.0f/255.0f)*0.7;
-uniform float normalBlend = 0.9f;
 uniform float maskCutoff = 0.25f;
 
 layout (std140, binding = 2) uniform Light
@@ -31,47 +28,19 @@ layout(binding = 2) uniform sampler2D idSampler;
 // World space attributes
 in VertexAttrib
 {
-    vec3 position;
-    vec3 normal;
+    vec3 position_ws;
+    vec3 normal_ws;
     vec4 color;
     vec4 tcoord;
 } fragment;
 
-vec3 GetUnifiedNormal(vec3 point)
-{
-    vec3 start = unifiedNormalsCapsuleStart;
-    vec3 end = unifiedNormalsCapsuleEnd;
-
-    vec3 u = end - start;
-    vec3 v = point - start;
-
-    // Determine if the point is outside the line segment
-    float w_scalar = dot(v, normalize(u));
-    if (w_scalar < 0.0f)
-    {
-        return normalize(mix(fragment.normal, normalize(point-start), normalBlend));
-    }
-    else if (w_scalar > length(u))
-    {
-        return normalize(mix(fragment.normal, normalize(point-end), normalBlend));
-    }
-    else
-    {
-        vec3 perpendicular = normalize(u)*w_scalar;
-        return normalize(mix(fragment.normal, normalize(v-perpendicular), normalBlend));
-    }
-
-    return fragment.normal;
-}
-
+// Light is computed in World Space
 vec4 PhongLight()
 {
     // Light computation
-    vec3 lightDir = normalize(light_position-fragment.position);
-    vec3 camDir = normalize(camera_position-fragment.position);
-    //vec3 normal = normalize(fragment.normal);
-    //vec3 normal = normalize(fragment.position - unifiedNormalsOrigin);
-    vec3 normal = GetUnifiedNormal(fragment.position);
+    vec3 lightDir = normalize(light_position-fragment.position_ws);
+    vec3 camDir = normalize(camera_position-fragment.position_ws);
+    vec3 normal = normalize(fragment.normal_ws);
 
     // Give ambient regions some depth
     float cameraContrib = clamp(dot(normal, camDir), 0.0, 1.0);
@@ -105,7 +74,7 @@ void main()
 
     if (bDrawDebugNormals)
     {
-        color = vec4(GetUnifiedNormal(fragment.position), 1.0f);
+        color = vec4(normalize(fragment.normal_ws), 1.0f);
     }
     else
     {

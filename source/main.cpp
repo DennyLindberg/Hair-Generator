@@ -77,16 +77,8 @@ printf(R"(
         Alt + MMB: Move
         Alt + RMB: Zoom
 
-        F:         Re-center camera on origin
-
-        4:         Display wireframe surfaces
-        5:         Display textured surfaces
-
-        6:         Toggle display of skeleton
-        7:         Toggle light follow camera
-        8:         Toggle hair flat
-			       
         S:         Take screenshot
+        F:         Re-center camera on origin			       
 			       
         ESC:       Close the application
 
@@ -128,29 +120,26 @@ printf(R"(
 	LightUBO.Allocate(16 * 2);
 
 	// Change each LoadShader call to LoadLiveShader for live editing
-	GLProgram lineShader, backgroundShader, phongShader, hairShader, bezierLinesShader, shellsShader;
+	GLProgram lineShader, backgroundShader, headShader, hairShader, bezierLinesShader;
 	ShaderManager shaderManager;
 	shaderManager.InitializeFolder(shaderFolder);
 	shaderManager.LoadShader(lineShader, L"line_vertex.glsl", L"line_fragment.glsl");
 	shaderManager.LoadShader(backgroundShader, L"background_vertex.glsl", L"background_fragment.glsl");
 
-	shaderManager.LoadLiveShader(phongShader, L"phong_vertex.glsl", L"phong_fragment.glsl", L"phong_geometry.glsl");
-	shaderManager.LoadLiveShader(hairShader, L"bezier_vertex.glsl", L"hair_fragment.glsl", L"linestrip_to_bezier_planes_geometry.glsl");
-	shaderManager.LoadLiveShader(bezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"linestrip_to_bezier_lines_geometry.glsl");
-	shaderManager.LoadLiveShader(shellsShader, L"shells_vertex.glsl", L"shells_fragment.glsl", L"shells_geometry.glsl");
+	shaderManager.LoadLiveShader(headShader, L"head_vertex.glsl", L"head_fragment.glsl", L"head_geometry.glsl");
+	shaderManager.LoadLiveShader(hairShader, L"bezier_vertex.glsl", L"hair_fragment.glsl", L"hair_planes_geometry.glsl");
+	shaderManager.LoadLiveShader(bezierLinesShader, L"bezier_vertex.glsl", L"line_fragment.glsl", L"bezier_lines_geometry.glsl");
 
 	// Initialize model values
 	glm::mat4 identity_transform{ 1.0f };
 	lineShader.Use();
 	lineShader.SetUniformMat4("model", identity_transform);
-	phongShader.Use(); 
-	phongShader.SetUniformMat4("model", identity_transform);
+	headShader.Use(); 
+	headShader.SetUniformMat4("model", identity_transform);
 	hairShader.Use();
 	hairShader.SetUniformMat4("model", identity_transform);
 	bezierLinesShader.Use();
 	bezierLinesShader.SetUniformMat4("model", identity_transform);
-	shellsShader.Use();
-	shellsShader.SetUniformMat4("model", identity_transform);
 
 	// Initialize light source in shaders
 	glm::vec4 lightColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -180,7 +169,6 @@ printf(R"(
 	);
 
 
-
 	/*
 		Load mesh
 	*/
@@ -191,8 +179,7 @@ printf(R"(
 
 	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
 	femalemesh.transform.scale = glm::vec3(0.0125f);
-	longHairMesh.transform.position = femalemesh.transform.position;
-	longHairMesh.transform.scale = femalemesh.transform.scale;
+	longHairMesh.transform = femalemesh.transform;
 
 	/*
 		Coordinate Axis Lines
@@ -220,8 +207,8 @@ printf(R"(
 	bool drawDebugNormals = false;
 	float hairUnifiedNormalBlend = 0.9f;
 	float hairMaskCutoff = 0.25f;
-	glm::fvec3 unifiedNormalsCapsuleStart = glm::fvec3(0.0f, 0.0f, 0.05f);
-	glm::fvec3 unifiedNormalsCapsuleEnd = glm::fvec3(0.0f, 0.3f, 0.05f);
+	glm::fvec3 unifiedNormalsCapsuleStart = glm::fvec3(0.0f, 0.0f, 0.0f);
+	glm::fvec3 unifiedNormalsCapsuleEnd = glm::fvec3(0.0f, 15.0f, 0.0f);
 	glm::fvec3 hairDarkColor = glm::fvec3(33.0f/255.0f, 17.0f/255.0f, 4.0f/255.0f);
 	glm::fvec3 hairLightColor = glm::fvec3(145.0f/255.0f, 123.0f/255.0f, 104.0f/255.0f)*0.7f;
 
@@ -249,8 +236,8 @@ printf(R"(
 			ImGui::Checkbox("Debug bezier", &renderBezierLines);
 			ImGui::Checkbox("Flat color", &renderHairFlat);
 			ImGui::Text("Hair Normals Capsule");
-			ImGui::SliderFloat3("Top", (float*)& unifiedNormalsCapsuleEnd, 0.0f, 0.5f);
-			ImGui::SliderFloat3("Bottom", (float*)& unifiedNormalsCapsuleStart, 0.0f, 0.5f);
+			ImGui::SliderFloat3("Top", (float*)& unifiedNormalsCapsuleEnd, 0.0f, 20.0f);
+			ImGui::SliderFloat3("Bottom", (float*)& unifiedNormalsCapsuleStart, 0.0f, 20.0f);
 			ImGui::SliderFloat("Amount", &hairUnifiedNormalBlend, 0.0f, 1.0f);
 			ImGui::Checkbox("Draw debug normals", &drawDebugNormals);
 			ImGui::Text("Hair Overrides");
@@ -362,10 +349,14 @@ printf(R"(
 
 		if (renderHead)
 		{
-			phongShader.Use();
-			phongShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
+			// Test transform
+			//femalemesh.transform.rotation = glm::vec3(0.0f, 360.0f*sinf(clock.time), 0.0f);
+			//longHairMesh.transform = femalemesh.transform;
+
+			headShader.Use();
+			headShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
 			malemesh.Draw();
-			phongShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
+			headShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
 			femalemesh.Draw();
 		}
 

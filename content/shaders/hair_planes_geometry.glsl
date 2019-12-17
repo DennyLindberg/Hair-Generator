@@ -10,6 +10,9 @@ layout (std140, binding = 1) uniform Camera
     vec3 camera_position;  // 128
 };
 uniform mat4 model;
+uniform vec3 unifiedNormalsCapsuleStart = vec3(0.0f, 0.0f, 0.0f);
+uniform vec3 unifiedNormalsCapsuleEnd = vec3(0.0f, 15.0f, 0.0f);
+uniform float normalBlend = 0.9f;
 
 in CPAttrib
 {
@@ -26,8 +29,8 @@ in CPAttrib
 // World space attributes
 out VertexAttrib
 {
-    vec3 position;
-    vec3 normal;
+    vec3 position_ws;
+    vec3 normal_ws;
     vec4 color;
     vec4 tcoord;
 } vertex;
@@ -64,6 +67,34 @@ struct QuadData
     PointData p4;
 };
 
+
+/*
+    Used to compute normals for all vertices so that the hair gets a smoother appearance.
+*/
+vec3 GetUnifiedNormalLocalSpace(vec3 point_ls, vec3 defaultnormal)
+{
+    vec3 u = unifiedNormalsCapsuleEnd - unifiedNormalsCapsuleStart;
+    vec3 v = point_ls - unifiedNormalsCapsuleStart;
+
+    // Determine if the point_ls is outside the line segment
+    float w_scalar = dot(v, normalize(u));
+    if (w_scalar < 0.0f)
+    {
+        return normalize(mix(defaultnormal, normalize(point_ls-unifiedNormalsCapsuleStart), normalBlend));
+    }
+    else if (w_scalar > length(u))
+    {
+        return normalize(mix(defaultnormal, normalize(point_ls-unifiedNormalsCapsuleEnd), normalBlend));
+    }
+    else
+    {
+        vec3 perpendicular = normalize(u)*w_scalar;
+        return normalize(mix(defaultnormal, normalize(v-perpendicular), normalBlend));
+    }
+
+    return defaultnormal;
+}
+
 vec3 bezier(vec3 p1, vec3 p2, vec3 p3, vec3 p4, float t)
 {
     vec3 sub1 = mix(p1, p2, t);
@@ -83,60 +114,12 @@ bool ShouldFlipTriangle(vec3 start, vec3 end, vec3 topright, vec3 topleft)
     return dot(forward, opposite_dir) > 0;
 }
 
-// bottomleft, bottomright, topright, topleft, bottomleft_worldspace, ...., normal1, normal2, texcoord1, texcoord2, FlipTriangleSplit
-void EmitQuad(vec4 bl, vec4 br, vec4 tr, vec4 tl, vec4 bl_ws, vec4 br_ws, vec4 tr_ws, vec4 tl_ws, vec3 n1, vec3 n2, vec3 t1, vec3 t2, bool bFlip)
-{
-    bFlip = false;
-
-    // Triangle 1
-    gl_Position = bl;
-    vertex.normal = n1;
-    vertex.position = bl_ws.xyz;
-    vertex.color = bl_ws;
-    vertex.tcoord = vec4(t1.b, t1.g, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = br;
-    vertex.normal = n2;
-    vertex.position = br_ws.xyz;
-    vertex.color = br_ws;
-    vertex.tcoord = vec4(t1.r, t1.g, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = bFlip? tl : tr;
-    vertex.normal = n2;
-    vertex.position = bFlip? tl_ws.xyz : tr_ws.xyz;
-    vertex.color = bFlip? tl_ws : tr_ws;
-    vertex.tcoord = bFlip? vec4(t2.b, t2.g, 0.0f, 1.0f) : vec4(t2.r, t2.g, 0.0f, 1.0f);
-    EmitVertex();
-    EndPrimitive();
-
-    // Triangle 2
-    gl_Position = tr;
-    vertex.normal = n2;
-    vertex.position = tr_ws.xyz;
-    vertex.color = tr_ws;
-    vertex.tcoord = vec4(t2.r, t2.g, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = tl;
-    vertex.normal = n1;
-    vertex.position = tl_ws.xyz;
-    vertex.color = tl_ws;
-    vertex.tcoord = vec4(t2.b, t2.g, 0.0f, 1.0f);
-    EmitVertex();
-    gl_Position = bFlip? br : bl;
-    vertex.normal = n1;
-    vertex.position = bFlip? br_ws.xyz : bl_ws.xyz;
-    vertex.color = bFlip? br_ws : bl_ws;
-    vertex.tcoord = bFlip? vec4(t1.r, t1.g, 0.0f, 1.0f) : vec4(t1.b, t1.g, 0.0f, 1.0f);
-    EmitVertex();
-    EndPrimitive();
-}
-
 void EmitPointData(PointData p)
 {
-    gl_Position = p.position;
-    vertex.normal = p.normal;
-    vertex.position = p.position_ws.xyz;
-    vertex.color = p.position_ws;
+    gl_Position = p.position;   // projection space
+    vertex.normal_ws = p.normal;   // world space
+    vertex.position_ws = p.position_ws.xyz; // world space
+    vertex.color = p.position_ws; // world space
     vertex.tcoord = vec4(p.texcoord.r, p.texcoord.g, 0.0f, 1.0f);
     EmitVertex();
 }
@@ -166,11 +149,6 @@ void GenerateSingleQuad(SegmentData data)
     PointData p3;
     PointData p4;
 
-    p1.normal = data.startNormal;
-    p2.normal = data.startNormal;
-    p3.normal = data.endNormal;
-    p4.normal = data.endNormal;
-
     // texcoord.rgb = (r=ustart, g=v, b=uend)
     p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
     p2.texcoord = vec2(data.startTexcoord.b, data.startTexcoord.g);
@@ -183,7 +161,13 @@ void GenerateSingleQuad(SegmentData data)
     p3.position = vec4(data.end   - data.endWidthVector, 1.0f);
     p4.position = vec4(data.end   + data.endWidthVector, 1.0f);
     bool bFlipTriangle = ShouldFlipTriangle(data.start, data.end, p3.position.xyz, p4.position.xyz);
-    
+
+    // Compute normals based on local space coordinates, then transform them to world space
+    p1.normal = (model * vec4(GetUnifiedNormalLocalSpace(p1.position.xyz, data.startNormal), 0.0f)).xyz;
+    p2.normal = (model * vec4(GetUnifiedNormalLocalSpace(p2.position.xyz, data.startNormal), 0.0f)).xyz;
+    p3.normal = (model * vec4(GetUnifiedNormalLocalSpace(p3.position.xyz, data.endNormal), 0.0f)).xyz;
+    p4.normal = (model * vec4(GetUnifiedNormalLocalSpace(p4.position.xyz, data.endNormal), 0.0f)).xyz;
+
     // Compute world space
     // width vector points "left" to p1 and p4
     p1.position_ws = model * p1.position;
@@ -197,7 +181,8 @@ void GenerateSingleQuad(SegmentData data)
     p2.position = vp * p2.position_ws;
     p3.position = vp * p3.position_ws;
     p4.position = vp * p4.position_ws;
-    
+
+
     if (bFlipTriangle)
     {
         EmitTriangle(p1, p2, p4);
@@ -229,13 +214,6 @@ void GenerateDoubleQuad(SegmentData data)
     PointData p5;
     PointData p6;
 
-    p1.normal = data.startNormal;
-    p2.normal = data.startNormal;
-    p3.normal = data.startNormal;
-    p4.normal = data.endNormal;
-    p5.normal = data.endNormal;
-    p6.normal = data.endNormal;
-
     // texcoord.rgb = (r=ustart, g=v, b=uend)
     p1.texcoord = vec2(data.startTexcoord.r, data.startTexcoord.g);
     p2.texcoord = vec2((data.startTexcoord.r+data.startTexcoord.b)/2.0f, data.startTexcoord.g);
@@ -263,6 +241,14 @@ void GenerateDoubleQuad(SegmentData data)
     p4.position -= endThicknessOffset;
     p5.position += endThicknessOffset;
     p6.position -= endThicknessOffset;
+
+    // Compute normals based on local space coordinates, then transform them to world space
+    p1.normal = (model * vec4(GetUnifiedNormalLocalSpace(p1.position.xyz, data.startNormal), 0.0f)).xyz;
+    p2.normal = (model * vec4(GetUnifiedNormalLocalSpace(p2.position.xyz, data.startNormal), 0.0f)).xyz;
+    p3.normal = (model * vec4(GetUnifiedNormalLocalSpace(p3.position.xyz, data.startNormal), 0.0f)).xyz;
+    p4.normal = (model * vec4(GetUnifiedNormalLocalSpace(p4.position.xyz, data.endNormal), 0.0f)).xyz;
+    p5.normal = (model * vec4(GetUnifiedNormalLocalSpace(p5.position.xyz, data.endNormal), 0.0f)).xyz;
+    p6.normal = (model * vec4(GetUnifiedNormalLocalSpace(p6.position.xyz, data.endNormal), 0.0f)).xyz;
     
     // Compute world space
     // width vector points "left" to p1 and p4
@@ -374,6 +360,16 @@ void GenerateTripleQuad(SegmentData data)
     p7.position += endThicknessOffset;
     p8.position -= endThicknessOffset;
     
+    // Compute normals based on local space coordinates, then transform them to world space
+    p1.normal = (model * vec4(GetUnifiedNormalLocalSpace(p1.position.xyz, data.startNormal), 0.0f)).xyz;
+    p2.normal = (model * vec4(GetUnifiedNormalLocalSpace(p2.position.xyz, data.startNormal), 0.0f)).xyz;
+    p3.normal = (model * vec4(GetUnifiedNormalLocalSpace(p3.position.xyz, data.startNormal), 0.0f)).xyz;
+    p4.normal = (model * vec4(GetUnifiedNormalLocalSpace(p4.position.xyz, data.startNormal), 0.0f)).xyz;
+    p5.normal = (model * vec4(GetUnifiedNormalLocalSpace(p5.position.xyz, data.endNormal), 0.0f)).xyz;
+    p6.normal = (model * vec4(GetUnifiedNormalLocalSpace(p6.position.xyz, data.endNormal), 0.0f)).xyz;
+    p7.normal = (model * vec4(GetUnifiedNormalLocalSpace(p7.position.xyz, data.endNormal), 0.0f)).xyz;
+    p8.normal = (model * vec4(GetUnifiedNormalLocalSpace(p8.position.xyz, data.endNormal), 0.0f)).xyz;
+
     // Compute world space
     // width vector points "left" to p1 and p4
     p1.position_ws = model * p1.position;
