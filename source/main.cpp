@@ -109,10 +109,9 @@ printf(R"(
 	GLTexture hair_color{ textureFolder / "sparrow_roots.png" };
 	GLTexture hair_alpha{ textureFolder / "sparrow_alpha.png" };
 	GLTexture hair_id{ textureFolder / "sparrow_id.png" };
-	GLTexture scalp{ textureFolder / "scalp.png" };
 	defaultTexture.UseForDrawing();
 
-	// Uniform Buffer Object containing matrices
+	// Uniform Buffer Object containing matrices and light information
 	GLUBO CameraUBO, LightUBO;
 	CameraUBO.Bind(1);
 	CameraUBO.Allocate(16 * 8 + 16); // 2 matrices => 8 columns => 16 bytes per column, +vec3 16 bytes
@@ -148,16 +147,7 @@ printf(R"(
 	LightUBO.SetData(glm::value_ptr(lightColor), 16, 16);
 
 	/*
-		UV-coordinate regions based on sparrow textures
-		U							V
-		0.0 - 0.2	long/thick		0-1
-		0.2 - 0.35	medium/thick	0-1
-		0.35 - 0.45 thin1			0-1
-		0.47 - 0.6	thin2			0-1
-		0.6 - 0.66	thin3			0.1-1
-
-		0.7-1.0		dense/short		0.7-1
-		0.7-1.0		dense/short		0.1-0.65
+		Load hair curve data
 	*/
 	GLBezierStrips longHairMesh;
 	GLMesh::LoadCurves(curvesFolder / "longhair.json", longHairMesh);
@@ -170,16 +160,13 @@ printf(R"(
 
 
 	/*
-		Load mesh
+		Load head mesh
 	*/
-	GLTriangleMesh bunnymesh, malemesh, femalemesh;
-	//GLMesh::LoadOBJ(meshFolder/"lpshead.obj", malemesh);
-	GLMesh::LoadOBJ(meshFolder/"sparrow.obj", femalemesh);
-	//GLMesh::LoadOBJ(meshFolder/"bunny_lowres.obj", bunnymesh);
-
-	femalemesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
-	femalemesh.transform.scale = glm::vec3(0.0125f);
-	longHairMesh.transform = femalemesh.transform;
+	GLTriangleMesh headmesh;
+	GLMesh::LoadOBJ(meshFolder/"sparrow.obj", headmesh);
+	headmesh.transform.position = glm::vec3(0.0f, 0.08f, 0.08f);
+	headmesh.transform.scale = glm::vec3(0.0125f);
+	longHairMesh.transform = headmesh.transform;
 
 	/*
 		Coordinate Axis Lines
@@ -196,7 +183,7 @@ printf(R"(
 	coordinateReferenceLines.SendToGPU();
 
 	/*
-		User interaction options
+		User interaction parameters in the UI
 	*/
 	bool renderHead = true;
 	bool renderHair = true;
@@ -336,7 +323,7 @@ printf(R"(
 		backgroundQuad.Draw();
 		glClear(GL_DEPTH_BUFFER_BIT);
 		
-		// Determine scene render properties
+		// Set scene render properties
 		glPolygonMode(GL_FRONT_AND_BACK, (renderWireframe? GL_LINE : GL_FILL));
 		glm::mat4 viewmatrix = camera.ViewMatrix();
 		glm::mat4 projectionmatrix = camera.ProjectionMatrix();
@@ -344,20 +331,18 @@ printf(R"(
 		CameraUBO.SetData(glm::value_ptr(viewmatrix), 64, 64);
 		CameraUBO.SetData(glm::value_ptr(camera.GetPosition()), 128, 16);
 
-		// Update light
+		// Update light source
 		LightUBO.SetData(glm::value_ptr(lightFollowsCamera? camera.GetPosition() : lightPosition), 0, 12);
 
 		if (renderHead)
 		{
-			// Test transform
-			//femalemesh.transform.rotation = glm::vec3(0.0f, 360.0f*sinf(clock.time), 0.0f);
-			//longHairMesh.transform = femalemesh.transform;
+			// Debug: Test changing the mesh transform over time
+			//headmesh.transform.rotation = glm::vec3(0.0f, 360.0f*sinf(clock.time), 0.0f);
+			//longHairMesh.transform = headmesh.transform;
 
 			headShader.Use();
-			headShader.SetUniformMat4("model", malemesh.transform.ModelMatrix());
-			malemesh.Draw();
-			headShader.SetUniformMat4("model", femalemesh.transform.ModelMatrix());
-			femalemesh.Draw();
+			headShader.SetUniformMat4("model", headmesh.transform.ModelMatrix());
+			headmesh.Draw();
 		}
 
 		if (renderHair)

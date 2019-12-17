@@ -42,11 +42,11 @@ vec4 PhongLight()
     vec3 camDir = normalize(camera_position-fragment.position_ws);
     vec3 normal = normalize(fragment.normal_ws);
 
-    // Give ambient regions some depth
+    // Give ambient regions some depth based on camera direction (otherwise the non-lit regions become flat)
     float cameraContrib = clamp(dot(normal, camDir), 0.0, 1.0);
     vec3 ambientLight = cameraContrib * vec3(0.2);
 
-    // Ordinary phong diffuse model with fake SSS
+    // Ordinary phong diffuse model
     float directLightDot = clamp(dot(normal, lightDir), 0.0, 1.0);
     float lightStrength = light_color.a;
     vec3 diffuseLight = lightStrength * directLightDot * light_color.rgb;
